@@ -61,11 +61,45 @@ int main(void)
 #endif
 
 	/* Turn the LED on */
-	gpio_init(GPIOA, LED_PIN, GPIO_OUTPUT, GPIO_AF0);
+	gpio_init(GPIOA, LED_PIN, GPIO_OUTPUT, GPIO_AF0, GPIO_LOW_SPEED);
 	gpio_output(GPIOA, LED_PIN, 0);
 
+	/* Set up the USART pins for alternate functions */
+	gpio_init(GPIOA, PIN_9, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+	gpio_init(GPIOA, PIN_10, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+
 	/* Enable PB1 with alternate functionality */
-	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1);
+	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+
+	/* Enable USART1 with a baud rate of 9600 */
+	usart_init(USART1, SYSCLK_FREQ/9600);
+
+	/* Send a simple hello world! message */
+	char message[] = "Hello world!\n";
+	while(1)
+	{
+		for (uint8_t i = 0; i < sizeof(message)/sizeof(char); i++)
+		{
+			/* Stall until the transmit data register is empty */
+			while (!(USART1->ISR & USART_ISR_TXE)) {};
+			USART1->TDR = message[i];
+		}
+	}
+//	while(1)
+//	{
+//		char recieve_byte;
+//		while (!(USART1->ISR & USART_ISR_RXNE)) {};
+//		recieve_byte = USART1->RDR;
+//		while (!(USART1->ISR & USART_ISR_TXE)) {};
+//		USART1->TDR = recieve_byte;
+//	}
+//	char rxb = '\0';
+//	while ( 1 ) {
+//		while( !( USART1->ISR & USART_ISR_RXNE ) ) {};
+//		rxb = USART1->RDR;
+//		while( !( USART1->ISR & USART_ISR_TXE ) ) {};
+//		USART1->TDR = rxb;
+//	}
 
 	/* Setup the SysTick peripheral for 1ms ticks */
 	SysTick_Config(SYSCLK_FREQ/1000);
@@ -94,6 +128,10 @@ int main(void)
 	/* Loop forever */
 	while(1)
 	{
+		gpio_output(GPIOA, LED_PIN, 1);
+		delay_ms(1000);
+		gpio_output(GPIOA, LED_PIN, 0);
+		delay_ms(1000);
 #ifdef RGB
 		/* Set all LEDs to red and send out the data */
 		led_rgb_write_all(&leds, MAX_BRIGHTNESS, 0, 0);

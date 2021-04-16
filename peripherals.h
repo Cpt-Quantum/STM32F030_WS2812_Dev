@@ -47,6 +47,13 @@ typedef enum
 	GPIO_AF_MAX = 0xF
 } GPIO_ALT_MODE_E;
 
+typedef enum
+{
+	GPIO_LOW_SPEED = 0,
+	GPIO_MED_SPEED = 1,
+	GPIO_HIGH_SPEED = 3
+} GPIO_SPEED_E;
+
 typedef enum {
 	PLL_MULT_X2  = RCC_CFGR_PLLMUL2,
 	PLL_MULT_X3  = RCC_CFGR_PLLMUL3,
@@ -75,10 +82,12 @@ typedef enum
 
 extern volatile uint32_t systick;
 
-void gpio_init(GPIO_TypeDef *gpio_port, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_mode,
-				GPIO_ALT_MODE_E gpio_af);
+void gpio_init(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_mode,
+				GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed);
 
-void gpio_output(GPIO_TypeDef *gpio_port, const GPIO_PIN_E io_pin, uint8_t value);
+void gpio_output(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, uint8_t value);
+
+void usart_init(USART_TypeDef *USARTx, uint16_t prescaler);
 
 void init_timer(TIM_TypeDef *TIMx);
 
