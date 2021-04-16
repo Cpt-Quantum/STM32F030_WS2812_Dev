@@ -64,6 +64,9 @@ flash: $(ELF_DEBUG)
 	openocd -f interface/stlink.cfg -f target/stm32f0x.cfg \
 		-c "program $(TARGET).elf verify reset exit"
 
+debug:
+	openocd -f interface/stlink.cfg -f target/stm32f0x.cfg
+
 .PHONY: clean
 clean:
 	rm -f $(OBJS)
