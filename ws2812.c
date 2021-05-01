@@ -2,6 +2,7 @@
 
 #include "ws2812.h"
 #include "peripherals.h"
+#include "timer.h"
 
 #include <stdint.h>
 #include <stdbool.h>

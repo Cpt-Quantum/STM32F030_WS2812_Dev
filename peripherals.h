@@ -5,55 +5,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum
-{
-	GPIO_INPUT = 0,
-	GPIO_OUTPUT = 1,
-	GPIO_ALT_MODE = 2,
-	GPIO_ANALOGUE = 3,
-	GPIO_MODER_MAX = 3
-} GPIO_MODER_E;
-
-typedef enum
-{
-	PIN_0  =  0,
-	PIN_1  =  1,
-	PIN_2  =  2,
-	PIN_3  =  3,
-	PIN_4  =  4,
-	PIN_5  =  5,
-	PIN_6  =  6,
-	PIN_7  =  7,
-	PIN_8  =  8,
-	PIN_9  =  9,
-	PIN_10 = 10,
-	PIN_11 = 11,
-	PIN_12 = 12,
-	PIN_13 = 13,
-	PIN_14 = 14,
-	PIN_15 = 15
-} GPIO_PIN_E;
-
-typedef enum
-{
-	GPIO_AF0 = 0,
-	GPIO_AF1 = 1,
-	GPIO_AF2 = 2,
-	GPIO_AF3 = 3,
-	GPIO_AF4 = 4,
-	GPIO_AF5 = 5,
-	GPIO_AF6 = 6,
-	GPIO_AF7 = 7,
-	GPIO_AF_MAX = 0xF
-} GPIO_ALT_MODE_E;
-
-typedef enum
-{
-	GPIO_LOW_SPEED = 0,
-	GPIO_MED_SPEED = 1,
-	GPIO_HIGH_SPEED = 3
-} GPIO_SPEED_E;
-
 typedef enum {
 	PLL_MULT_X2  = RCC_CFGR_PLLMUL2,
 	PLL_MULT_X3  = RCC_CFGR_PLLMUL3,
@@ -72,79 +23,7 @@ typedef enum {
 	PLL_MULT_X16 = RCC_CFGR_PLLMUL16
 } PLL_MULT_E;
 
-typedef enum
-{
-	TIM_CHAN_1 = 0,
-	TIM_CHAN_2 = 1,
-	TIM_CHAN_3 = 2,
-	TIM_CHAN_4 = 3,
-} TIMER_CHANNEL_E;
-
 extern volatile uint32_t systick;
-
-void gpio_init(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_mode,
-				GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed);
-
-void gpio_output(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, uint8_t value);
-
-void usart_init(USART_TypeDef *USARTx, uint16_t prescaler,
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en, uint8_t interrupt_prio);
-
-/* Simple function to combine all of the interrupts for USART into one number */
-static inline uint32_t usart_interrupt_combine(bool txe_interrupt_en,
-									  			bool rxne_interrupt_en, 
-									  			bool tc_interrupt_en)
-{
-	return ((txe_interrupt_en ? USART_CR1_TXEIE:0)   |
-			(rxne_interrupt_en ? USART_CR1_RXNEIE:0) |
-			(tc_interrupt_en ? USART_CR1_TCIE:0));
-}
-
-static inline void usart_start_tx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
-{
-	USARTx->CR1 |= (USART_CR1_TE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
-}
-static inline void usart_stop_tx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
-{
-	USARTx->CR1 &= ~(USART_CR1_TE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
-}
-
-static inline void usart_start_rx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
-{
-	USARTx->CR1 |= (USART_CR1_RE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
-}
-static inline void usart_stop_rx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
-{
-	USARTx->CR1 &= ~(USART_CR1_RE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
-}
-
-void init_timer(TIM_TypeDef *TIMx);
-
-void start_timer(TIM_TypeDef *TIMx, uint16_t prescale, uint16_t count);
-
-void setup_timer_capture_compare(TIM_TypeDef *TIMx, const TIMER_CHANNEL_E channel,
-		uint16_t ARR, uint16_t CCR, uint16_t prescale, bool flip_polarity, bool preload);
 
 void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult);
 

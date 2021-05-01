@@ -2,6 +2,9 @@
 
 #include "circular_buffer.h"
 #include "peripherals.h"
+#include "gpio.h"
+#include "timer.h"
+#include "usart.h"
 #include "ws2812.h"
 
 #include <stdint.h>
