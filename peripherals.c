@@ -55,7 +55,9 @@ void gpio_output(GPIO_TypeDef *GPIOx, const GPIO_PIN_E gpio_pin, uint8_t value)
 	GPIOx->BSRR = ((1 << gpio_pin) << (16 * (!value))); 
 }
 
-void usart_init(USART_TypeDef *USARTx, uint16_t prescaler)
+void usart_init(USART_TypeDef *USARTx, uint16_t prescaler,
+				bool txe_interrupt_en, bool rxne_interrupt_en,
+				bool tc_interrupt_en, uint8_t interrupt_prio)
 {
 	/* Enable the clock to the specified USART and reset it */
 	if (USARTx == USART1)
@@ -67,8 +69,20 @@ void usart_init(USART_TypeDef *USARTx, uint16_t prescaler)
 	/* Set the baud rate */
 	USARTx->BRR = prescaler;
 
-	/* Now finally enabled the peripheral */
+	/* If any interrupts are enabled, set the NVIC priority */
+	if (txe_interrupt_en || rxne_interrupt_en || tc_interrupt_en)
+	{
+		NVIC_SetPriority(USART1_IRQn, interrupt_prio);
+		NVIC_EnableIRQ(USART1_IRQn);
+	}
+
+	/* Now enable the peripheral */
 	USARTx->CR1 |= (USART_CR1_RE | USART_CR1_TE | USART_CR1_UE);
+
+	/* Enable any specified interrupts */
+	USARTx->CR1 |= usart_interrupt_combine(txe_interrupt_en, rxne_interrupt_en,
+											tc_interrupt_en);
+
 }
 
 void init_timer(TIM_TypeDef *TIMx)

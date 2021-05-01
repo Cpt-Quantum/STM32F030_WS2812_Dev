@@ -1,5 +1,6 @@
 #include "inc/stm32f030x6.h"
 
+#include "circular_buffer.h"
 #include "peripherals.h"
 #include "ws2812.h"
 
@@ -7,13 +8,13 @@
 #include <stdbool.h>
 
 /* Set whether the board uses RGB or RGBW leds */
-//#define RGBW
+#define RGBW
 
 /* Define pin connections */
-#define LED_PIN 4
+#define LED_PIN 0
 
-#define NUM_LEDS 58
-#define MAX_BRIGHTNESS 180
+#define NUM_LEDS 12
+#define MAX_BRIGHTNESS 10	//NB: Changed from 180 to avoid blinding me
 
 /* Define the LED data structure and point it at the LED data array */
 #ifdef RGB
@@ -44,6 +45,18 @@
 
 #define SYSCLK_FREQ 48000000
 
+/* USART variables and functions to be called on interrupt */
+char usart_message[] = "Hello world!\n";
+
+#define USART_BUFFER_LENGTH 32
+char usart_buf[USART_BUFFER_LENGTH];
+ringbuffer_t usart_buffer = {
+	.buffer = usart_buf,
+	.head = 0,
+	.tail = 0,
+	.length = sizeof(usart_buf)
+};
+
 int main(void)
 {
 	/* Initialisation */
@@ -62,44 +75,17 @@ int main(void)
 
 	/* Turn the LED on */
 	gpio_init(GPIOA, LED_PIN, GPIO_OUTPUT, GPIO_AF0, GPIO_LOW_SPEED);
-	gpio_output(GPIOA, LED_PIN, 0);
+	gpio_output(GPIOA, LED_PIN, 1);
 
 	/* Set up the USART pins for alternate functions */
-	gpio_init(GPIOA, PIN_9, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
-	gpio_init(GPIOA, PIN_10, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+	gpio_init(GPIOA, PIN_2, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+	gpio_init(GPIOA, PIN_3, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
 
 	/* Enable PB1 with alternate functionality */
 	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
 
 	/* Enable USART1 with a baud rate of 9600 */
-	usart_init(USART1, SYSCLK_FREQ/9600);
-
-	/* Send a simple hello world! message */
-	char message[] = "Hello world!\n";
-	while(1)
-	{
-		for (uint8_t i = 0; i < sizeof(message)/sizeof(char); i++)
-		{
-			/* Stall until the transmit data register is empty */
-			while (!(USART1->ISR & USART_ISR_TXE)) {};
-			USART1->TDR = message[i];
-		}
-	}
-//	while(1)
-//	{
-//		char recieve_byte;
-//		while (!(USART1->ISR & USART_ISR_RXNE)) {};
-//		recieve_byte = USART1->RDR;
-//		while (!(USART1->ISR & USART_ISR_TXE)) {};
-//		USART1->TDR = recieve_byte;
-//	}
-//	char rxb = '\0';
-//	while ( 1 ) {
-//		while( !( USART1->ISR & USART_ISR_RXNE ) ) {};
-//		rxb = USART1->RDR;
-//		while( !( USART1->ISR & USART_ISR_TXE ) ) {};
-//		USART1->TDR = rxb;
-//	}
+	usart_init(USART1, SYSCLK_FREQ/9600, false, false, true, 3);
 
 	/* Setup the SysTick peripheral for 1ms ticks */
 	SysTick_Config(SYSCLK_FREQ/1000);
@@ -111,7 +97,6 @@ int main(void)
 
 #if defined RGB || defined RGBW
 	/* Enable DMA and initialise the LEDs */
-	//dma_setup();
 	led_init();
 #endif
 
@@ -122,12 +107,13 @@ int main(void)
 #ifdef RGBW
 	led_rgbw_write_all(&leds, 0, 0, 0,0);
 	led_show(&leds, TIM3);
-	//led_rgbw_write_all(&leds, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS);
 #endif
 
 	/* Loop forever */
 	while(1)
 	{
+		ringbuffer_write_string(&usart_buffer, usart_message);
+		USART1->CR1 |= (USART_CR1_TE | USART_CR1_TCIE);
 		gpio_output(GPIOA, LED_PIN, 1);
 		delay_ms(1000);
 		gpio_output(GPIOA, LED_PIN, 0);
@@ -230,3 +216,45 @@ void DMA1_Channel2_3_IRQHandler(void)
 	}
 }
 #endif
+
+void USART1_IRQHandler(void)
+{
+	/* Check for TX register empty interrupt flag */
+	if (USART1->ISR & USART_ISR_TXE)
+	{
+		///* Clear the interrupt flag */
+		//USART1->ISR = USART_ISR_TXE;
+
+	}
+	/* Check for RX register not empty interrupt flag */
+	if (USART1->ISR & USART_ISR_RXNE)
+	{
+		///* Clear the interrupt flag */
+		//USART1->ISR = USART_ISR_RXNE;
+
+	}
+	/* Check for transmit complete interrupt flag */
+	if (USART1->ISR & USART_ISR_TC)
+	{
+		///* Clear the interrupt flag */
+		USART1->ICR = USART_ICR_TCCF;
+		
+		/* Output next character in the ringbuffer */
+		char temp = ringbuffer_read(&usart_buffer);
+		/* Check for an empty buffer, denoted by null */
+		if (temp == '\0')
+		{
+			/* Turn off the UART and the transmit complete interrupt */
+			usart_stop_tx(USART1, false, false, true);
+		}
+		else
+		{
+			USART1->TDR = temp;
+		}
+	}
+	/* Check for overrun error interrupt flag and clear it if it has tripped */
+	if (USART1->ISR & USART_ISR_ORE)
+	{
+		USART1->ICR = USART_ICR_ORECF;
+	}
+}
