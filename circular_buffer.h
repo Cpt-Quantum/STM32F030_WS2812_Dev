@@ -34,6 +34,7 @@ static inline void ringbuffer_write_string(ringbuffer_t *buf, char *string)
 	uint16_t i = 0;
 	while(1)
 	{
+		/* Check for null as this indicates the buffer is empty */
 		if (string[i] == '\0')
 		{
 			break;
@@ -41,6 +42,21 @@ static inline void ringbuffer_write_string(ringbuffer_t *buf, char *string)
 		else
 		{
 			ringbuffer_write(buf, string[i]);
+		}
+		i++;
+	}
+}
+
+static inline void ringbuffer_read_string(ringbuffer_t *buf, char *string)
+{
+	uint16_t i = 0;
+	while(1)
+	{
+		string[i] = ringbuffer_read(buf);
+		/* Check for end of buffer and exit */
+		if (string[i] == '\0')
+		{
+			break;
 		}
 		i++;
 	}

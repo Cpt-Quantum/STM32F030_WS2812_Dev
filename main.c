@@ -43,21 +43,40 @@
 					.data_format = LED_RGBW,
 					.led_bytes = LED_BYTES,
 				 };
-
 #endif
 
 #define SYSCLK_FREQ 48000000
 
-/* USART variables and functions to be called on interrupt */
+/* Message to print over USART every second */
 char usart_message[] = "Hello world!\n";
 
+/* Register the needed ringbuffers for USART1 RX and TX */
 #define USART_BUFFER_LENGTH 32
-char usart_buf[USART_BUFFER_LENGTH];
-ringbuffer_t usart_buffer = {
-	.buffer = usart_buf,
+char usart_tx_buf[USART_BUFFER_LENGTH];
+char usart_rx_buf[USART_BUFFER_LENGTH];
+ringbuffer_t usart_tx_buffer = {
+	.buffer = usart_tx_buf,
 	.head = 0,
 	.tail = 0,
-	.length = sizeof(usart_buf)
+	.length = sizeof(usart_tx_buf)
+};
+ringbuffer_t usart_rx_buffer = {
+	.buffer = usart_rx_buf,
+	.head = 0,
+	.tail = 0,
+	.length = sizeof(usart_rx_buf)
+};
+
+/* Initialise the struct for USART1 settings */
+USART_t USART1_settings = {
+		.USARTx = USART1,
+		.prescaler = SYSCLK_FREQ/9600,
+		.txe_interrupt_en = false,
+		.rxne_interrupt_en = false,
+		.tc_interrupt_en = true,
+		.interrupt_prio = 3,
+		.tx_buffer = &usart_tx_buffer,
+		.rx_buffer = &usart_rx_buffer
 };
 
 int main(void)
@@ -87,8 +106,8 @@ int main(void)
 	/* Enable PB1 with alternate functionality */
 	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
 
-	/* Enable USART1 with a baud rate of 9600 */
-	usart_init(USART1, SYSCLK_FREQ/9600, false, false, true, 3);
+	/* Enable USART1 */
+	usart_init(USART1_settings);
 
 	/* Setup the SysTick peripheral for 1ms ticks */
 	SysTick_Config(SYSCLK_FREQ/1000);
@@ -115,8 +134,8 @@ int main(void)
 	/* Loop forever */
 	while(1)
 	{
-		ringbuffer_write_string(&usart_buffer, usart_message);
-		USART1->CR1 |= (USART_CR1_TE | USART_CR1_TCIE);
+		usart_write_tx_buffer(USART1_settings, usart_message);
+		usart_start_tx(USART1, false, false, true);
 		gpio_output(GPIOA, LED_PIN, 1);
 		delay_ms(1000);
 		gpio_output(GPIOA, LED_PIN, 0);
@@ -243,7 +262,7 @@ void USART1_IRQHandler(void)
 		USART1->ICR = USART_ICR_TCCF;
 		
 		/* Output next character in the ringbuffer */
-		char temp = ringbuffer_read(&usart_buffer);
+		char temp = ringbuffer_read(USART1_settings.tx_buffer);
 		/* Check for an empty buffer, denoted by null */
 		if (temp == '\0')
 		{
