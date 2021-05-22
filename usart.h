@@ -36,42 +36,40 @@ static inline uint32_t usart_interrupt_combine(bool txe_interrupt_en,
 			(tc_interrupt_en ? USART_CR1_TCIE:0));
 }
 
-static inline void usart_start_tx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
+static inline void usart_start_tx(USART_t USART_settings)
 {
-	USARTx->CR1 |= (USART_CR1_TE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
+	USART_settings.USARTx->CR1 |= (USART_CR1_TE |
+									usart_interrupt_combine(
+											USART_settings.txe_interrupt_en,
+											USART_settings.rxne_interrupt_en,
+											USART_settings.tc_interrupt_en));
 }
-static inline void usart_stop_tx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
+static inline void usart_stop_tx(USART_t USART_settings)
 {
-	USARTx->CR1 &= ~(USART_CR1_TE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
+	USART_settings.USARTx->CR1 &= ~(USART_CR1_TE |
+									usart_interrupt_combine(
+											USART_settings.txe_interrupt_en,
+											0,
+											USART_settings.tc_interrupt_en));
+
 }
 
-static inline void usart_start_rx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
+static inline void usart_start_rx(USART_t USART_settings)
 {
-	USARTx->CR1 |= (USART_CR1_RE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
+	USART_settings.USARTx->CR1 |= (USART_CR1_RE |
+									usart_interrupt_combine(
+											USART_settings.txe_interrupt_en,
+											USART_settings.rxne_interrupt_en,
+											USART_settings.tc_interrupt_en));
+
 }
-static inline void usart_stop_rx(USART_TypeDef *USARTx, 
-				bool txe_interrupt_en, bool rxne_interrupt_en, 
-				bool tc_interrupt_en)
+static inline void usart_stop_rx(USART_t USART_settings)
 {
-	USARTx->CR1 &= ~(USART_CR1_RE | 
-					usart_interrupt_combine(txe_interrupt_en,
-											rxne_interrupt_en,
-											tc_interrupt_en));
+	USART_settings.USARTx->CR1 &= ~(USART_CR1_RE |
+									usart_interrupt_combine(
+											0,
+											USART_settings.rxne_interrupt_en,
+											0));
 }
 
 #endif //USART_H

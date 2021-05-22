@@ -3,6 +3,7 @@
 #include "circular_buffer.h"
 #include "peripherals.h"
 #include "gpio.h"
+#include "adc.h"
 #include "timer.h"
 #include "usart.h"
 #include "ws2812.h"
@@ -50,10 +51,12 @@
 /* Message to print over USART every second */
 char usart_message[] = "Hello world!\n";
 
+volatile char rx_char_buff = '\0';
+
 /* Register the needed ringbuffers for USART1 RX and TX */
 #define USART_BUFFER_LENGTH 32
-char usart_tx_buf[USART_BUFFER_LENGTH];
-char usart_rx_buf[USART_BUFFER_LENGTH];
+volatile char usart_tx_buf[USART_BUFFER_LENGTH];
+volatile char usart_rx_buf[USART_BUFFER_LENGTH];
 ringbuffer_t usart_tx_buffer = {
 	.buffer = usart_tx_buf,
 	.head = 0,
@@ -71,13 +74,17 @@ ringbuffer_t usart_rx_buffer = {
 USART_t USART1_settings = {
 		.USARTx = USART1,
 		.prescaler = SYSCLK_FREQ/9600,
-		.txe_interrupt_en = false,
-		.rxne_interrupt_en = false,
-		.tc_interrupt_en = true,
+		.txe_interrupt_en = true,
+		.rxne_interrupt_en = true,
+		.tc_interrupt_en = false,
 		.interrupt_prio = 3,
 		.tx_buffer = &usart_tx_buffer,
 		.rx_buffer = &usart_rx_buffer
 };
+
+/* ADC data buffer */
+#define ADC_BUFFER_SIZE 16
+uint16_t adc_data[ADC_BUFFER_SIZE];
 
 int main(void)
 {
@@ -102,6 +109,12 @@ int main(void)
 	/* Set up the USART pins for alternate functions */
 	gpio_init(GPIOA, PIN_2, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
 	gpio_init(GPIOA, PIN_3, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
+
+	/* Set up PA6 for analogue input */
+	gpio_init(GPIOA, PIN_6, GPIO_ANALOGUE, GPIO_AF0, GPIO_LOW_SPEED);
+	/* Now enable the ADC */
+	uint32_t channel_select = 1 << 5;
+	adc_init(channel_select, adc_data, sizeof(adc_data)/sizeof(uint16_t));
 
 	/* Enable PB1 with alternate functionality */
 	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
@@ -134,8 +147,10 @@ int main(void)
 	/* Loop forever */
 	while(1)
 	{
-		usart_write_tx_buffer(USART1_settings, usart_message);
-		usart_start_tx(USART1, false, false, true);
+		char received_message[USART_BUFFER_LENGTH];
+		usart_read_rx_buffer(USART1_settings, received_message);
+		usart_write_tx_buffer(USART1_settings, received_message);
+		usart_start_tx(USART1_settings);
 		gpio_output(GPIOA, LED_PIN, 1);
 		delay_ms(1000);
 		gpio_output(GPIOA, LED_PIN, 0);
@@ -244,35 +259,27 @@ void USART1_IRQHandler(void)
 	/* Check for TX register empty interrupt flag */
 	if (USART1->ISR & USART_ISR_TXE)
 	{
-		///* Clear the interrupt flag */
-		//USART1->ISR = USART_ISR_TXE;
-
-	}
-	/* Check for RX register not empty interrupt flag */
-	if (USART1->ISR & USART_ISR_RXNE)
-	{
-		///* Clear the interrupt flag */
-		//USART1->ISR = USART_ISR_RXNE;
-
-	}
-	/* Check for transmit complete interrupt flag */
-	if (USART1->ISR & USART_ISR_TC)
-	{
-		///* Clear the interrupt flag */
-		USART1->ICR = USART_ICR_TCCF;
-		
 		/* Output next character in the ringbuffer */
 		char temp = ringbuffer_read(USART1_settings.tx_buffer);
 		/* Check for an empty buffer, denoted by null */
 		if (temp == '\0')
 		{
 			/* Turn off the UART and the transmit complete interrupt */
-			usart_stop_tx(USART1, false, false, true);
+			usart_stop_tx(USART1_settings);
 		}
-		else
-		{
-			USART1->TDR = temp;
-		}
+		USART1->TDR = temp;
+	}
+	/* Check for RX register not empty interrupt flag */
+	if (USART1->ISR & USART_ISR_RXNE)
+	{
+		char temp = USART1->RDR;
+		ringbuffer_write(USART1_settings.rx_buffer, temp);
+	}
+	/* Check for transmit complete interrupt flag */
+	if (USART1->ISR & USART_ISR_TC)
+	{
+		///* Clear the interrupt flag */
+		USART1->ICR = USART_ICR_TCCF;
 	}
 	/* Check for overrun error interrupt flag and clear it if it has tripped */
 	if (USART1->ISR & USART_ISR_ORE)
