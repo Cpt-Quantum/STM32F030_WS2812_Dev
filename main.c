@@ -12,7 +12,7 @@
 #include <stdbool.h>
 
 /* Set whether the board uses RGB or RGBW leds */
-#define RGBW
+//#define RGBW
 
 /* Define pin connections */
 #define LED_PIN 0
@@ -61,13 +61,17 @@ ringbuffer_t usart_tx_buffer = {
 	.buffer = usart_tx_buf,
 	.head = 0,
 	.tail = 0,
-	.length = sizeof(usart_tx_buf)
+	.length = sizeof(usart_tx_buf),
+	.buffer_empty = true,
+	.buffer_full = false
 };
 ringbuffer_t usart_rx_buffer = {
 	.buffer = usart_rx_buf,
 	.head = 0,
 	.tail = 0,
-	.length = sizeof(usart_rx_buf)
+	.length = sizeof(usart_rx_buf),
+	.buffer_empty = true,
+	.buffer_full = false
 };
 
 /* Initialise the struct for USART1 settings */
@@ -83,7 +87,7 @@ USART_t USART1_settings = {
 };
 
 /* ADC data buffer */
-#define ADC_BUFFER_SIZE 16
+#define ADC_BUFFER_SIZE 12
 uint16_t adc_data[ADC_BUFFER_SIZE];
 
 int main(void)
@@ -140,16 +144,25 @@ int main(void)
 	led_show(&leds, TIM3);
 #endif
 #ifdef RGBW
-	led_rgbw_write_all(&leds, 0, 0, 0,0);
+	led_rgbw_write_all(&leds, 0, 0, 0, 0);
 	led_show(&leds, TIM3);
 #endif
 
 	/* Loop forever */
 	while(1)
 	{
-		char received_message[USART_BUFFER_LENGTH];
-		usart_read_rx_buffer(USART1_settings, received_message);
-		usart_write_tx_buffer(USART1_settings, received_message);
+		//char received_message[USART_BUFFER_LENGTH];
+		//usart_read_rx_buffer(USART1_settings, received_message);
+		char adc_usart_buffer[ADC_BUFFER_SIZE * 2];
+		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
+		{
+			//adc_usart_buffer[i]   = (char)(adc_data[i] & 0x00FF);
+			//adc_usart_buffer[2*i] = (char)((adc_data[i] & 0xFF00) >> 8);
+			adc_usart_buffer[i] = 'H';
+			adc_usart_buffer[2*i] = 'W';
+		}
+		//usart_write_tx_buffer(USART1_settings, adc_usart_buffer, ADC_BUFFER_SIZE*2);
+		usart_write_tx_buffer(USART1_settings, usart_message, (sizeof(usart_message) - 1));
 		usart_start_tx(USART1_settings);
 		gpio_output(GPIOA, LED_PIN, 1);
 		delay_ms(1000);
@@ -224,6 +237,25 @@ void SysTick_Handler( void ) {
 	systick = systick + 1;
 }
 
+
+/* This DMA interrupt handler is used by the ADC to copy data to a buffer */
+void DMA1_Channel1_IRQHandler(void)
+{
+	/* Half way through buffer interrupt */
+	if (DMA1->ISR & DMA_ISR_HTIF1)
+	{
+		/* Clear the interrupt flag */
+		DMA1->IFCR = DMA_IFCR_CHTIF1;
+	}
+	/* End of buffer interrupt */
+	else if (DMA1->ISR & DMA_ISR_TCIF1)
+	{
+		/* Clear the interrupt flag */
+		DMA1->IFCR = DMA_IFCR_CTCIF3;
+	}
+}
+
+/* This DMA interrupt handler is used by timer 3 for the WS2812 LEDs */
 #if defined RGB || defined RGBW
 void DMA1_Channel2_3_IRQHandler(void)
 {
@@ -261,13 +293,18 @@ void USART1_IRQHandler(void)
 	{
 		/* Output next character in the ringbuffer */
 		char temp = ringbuffer_read(USART1_settings.tx_buffer);
-		/* Check for an empty buffer, denoted by null */
-		if (temp == '\0')
+		/* Check for an empty buffer, if so disable the transmit */
+		if (USART1_settings.tx_buffer->buffer_empty)
 		{
-			/* Turn off the UART and the transmit complete interrupt */
-			usart_stop_tx(USART1_settings);
+			/* Disable the transmit buffer empty interrupt */
+			/* This means we don't have to clear it */
+			USART1->CR1 &= ~(USART_CR1_TXEIE);
 		}
-		USART1->TDR = temp;
+		else
+		{
+			/* Only write to the transfer register if the buffer isn't empty */
+			USART1->TDR = temp;
+		}
 	}
 	/* Check for RX register not empty interrupt flag */
 	if (USART1->ISR & USART_ISR_RXNE)

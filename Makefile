@@ -40,6 +40,7 @@ STARTUP = ./startup.s
 C_SRC = ./main.c
 C_SRC += ./peripherals.c
 C_SRC += ./gpio.c
+C_SRC += ./adc.c
 C_SRC += ./timer.c
 C_SRC += ./usart.c
 C_SRC += ./ws2812.c
