@@ -39,12 +39,12 @@ void usart_init(USART_t USART_settings)
 											USART_settings.tc_interrupt_en);
 }
 
-void usart_write_tx_buffer(USART_t USART_settings, char *string)
+void usart_write_tx_buffer(USART_t USART_settings, char *string, uint32_t length)
 {
-	ringbuffer_write_string(USART_settings.tx_buffer, string);
+	ringbuffer_write_string(USART_settings.tx_buffer, string, length);
 }
 
-void usart_read_rx_buffer(USART_t USART_settings, char *string)
+void usart_read_rx_buffer(USART_t USART_settings, char *string, uint32_t length)
 {
-	ringbuffer_read_string(USART_settings.rx_buffer, string);
+	ringbuffer_read_string(USART_settings.rx_buffer, string, length);
 }

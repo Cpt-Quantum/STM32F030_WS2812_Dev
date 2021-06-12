@@ -22,9 +22,9 @@ typedef struct {
 /* Function to initialise the USART based on the settings in the provided struct */
 void usart_init(USART_t USART_settings);
 /* Function to write string into USART TX ringbuffer */
-void usart_write_tx_buffer(USART_t USART_settings, char* string);
+void usart_write_tx_buffer(USART_t USART_settings, char* string, uint32_t length);
 /* Function to read current contents of the RX buffer into the provided string */
-void usart_read_rx_buffer(USART_t USART_settings, char *string);
+void usart_read_rx_buffer(USART_t USART_settings, char *string, uint32_t length);
 
 /* Simple function to combine all of the interrupts for USART into one number */
 static inline uint32_t usart_interrupt_combine(bool txe_interrupt_en,
