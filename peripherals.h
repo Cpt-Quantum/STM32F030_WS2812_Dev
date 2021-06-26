@@ -23,9 +23,32 @@ typedef enum {
 	PLL_MULT_X16 = RCC_CFGR_PLLMUL16
 } PLL_MULT_E;
 
+typedef enum
+{
+	PPRE_DIV_1  = RCC_CFGR_PPRE_DIV1,
+	PPRE_DIV_2  = RCC_CFGR_PPRE_DIV2,
+	PPRE_DIV_4  = RCC_CFGR_PPRE_DIV4,
+	PPRE_DIV_8  = RCC_CFGR_PPRE_DIV8,
+	PPRE_DIV_16 = RCC_CFGR_PPRE_DIV16
+} PPRE_E;
+
+typedef enum
+{
+	HPRE_DIV_1   = RCC_CFGR_HPRE_DIV1,
+	HPRE_DIV_2   = RCC_CFGR_HPRE_DIV2,
+	HPRE_DIV_4   = RCC_CFGR_HPRE_DIV4,
+	HPRE_DIV_8   = RCC_CFGR_HPRE_DIV8,
+	HPRE_DIV_16  = RCC_CFGR_HPRE_DIV16,
+	HPRE_DIV_64  = RCC_CFGR_HPRE_DIV64,
+	HPRE_DIV_128 = RCC_CFGR_HPRE_DIV128,
+	HPRE_DIV_256 = RCC_CFGR_HPRE_DIV256,
+	HPRE_DIV_512 = RCC_CFGR_HPRE_DIV512,
+} HPRE_E;
+
 extern volatile uint32_t systick;
 
-void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult);
+void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult,
+					PPRE_E APB_DIV, HPRE_E AHB_DIV);
 
 void delay_ms(uint32_t ms);
 

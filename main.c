@@ -47,6 +47,11 @@
 #endif
 
 #define SYSCLK_FREQ 48000000
+#define APB_FREQ (SYSCLK_FREQ/4)
+#define AHB_FREQ (SYSCLK_FREQ/4)
+
+/* An ARR value of 1200 gives a sample rate of 40kHz */
+#define ADC_CLK_DIV 1200
 
 /* Message to print over USART every second */
 char usart_message[] = "Hello world!\n";
@@ -77,7 +82,8 @@ ringbuffer_t usart_rx_buffer = {
 /* Initialise the struct for USART1 settings */
 USART_t USART1_settings = {
 		.USARTx = USART1,
-		.prescaler = SYSCLK_FREQ/9600,
+		.clk_src = USART_CLK_SYSCLK,
+		.prescaler = SYSCLK_FREQ/48000,
 		.txe_interrupt_en = true,
 		.rxne_interrupt_en = true,
 		.tc_interrupt_en = false,
@@ -87,7 +93,9 @@ USART_t USART1_settings = {
 };
 
 /* ADC data buffer */
-#define ADC_BUFFER_SIZE 12
+#define ADC_DMA_BUFFER_SIZE 128
+#define ADC_BUFFER_SIZE (ADC_DMA_BUFFER_SIZE/2)
+uint16_t adc_dma_buff[ADC_DMA_BUFFER_SIZE];
 uint16_t adc_data[ADC_BUFFER_SIZE];
 
 int main(void)
@@ -99,7 +107,7 @@ int main(void)
 	FLASH->ACR |= (FLASH_ACR_LATENCY | FLASH_ACR_PRFTBE);
 
 	/* Initialise system clock */
-	clock_setup(false, true, PLL_MULT_X12);
+	clock_setup(false, true, PLL_MULT_X12, PPRE_DIV_4, HPRE_DIV_4);
 
 #if defined RGB || defined RGBW
 	/* Initialise the timer */
@@ -118,7 +126,8 @@ int main(void)
 	gpio_init(GPIOA, PIN_6, GPIO_ANALOGUE, GPIO_AF0, GPIO_LOW_SPEED);
 	/* Now enable the ADC */
 	uint32_t channel_select = 1 << 5;
-	adc_init(channel_select, adc_data, sizeof(adc_data)/sizeof(uint16_t));
+	adc_init(channel_select, adc_dma_buff, ADC_DMA_BUFFER_SIZE,
+				ADC_CLK_DIV);
 
 	/* Enable PB1 with alternate functionality */
 	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
@@ -127,7 +136,10 @@ int main(void)
 	usart_init(USART1_settings);
 
 	/* Setup the SysTick peripheral for 1ms ticks */
-	SysTick_Config(SYSCLK_FREQ/1000);
+	SysTick_Config(AHB_FREQ/1000);
+
+	/* Initialise PA9 as output for debug testing */
+	gpio_init(GPIOA, PIN_9, GPIO_OUTPUT, GPIO_AF0, GPIO_LOW_SPEED);
 
 	/* End of initialisation */
 
@@ -156,13 +168,18 @@ int main(void)
 		char adc_usart_buffer[ADC_BUFFER_SIZE * 2];
 		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
 		{
-			//adc_usart_buffer[i]   = (char)(adc_data[i] & 0x00FF);
-			//adc_usart_buffer[2*i] = (char)((adc_data[i] & 0xFF00) >> 8);
-			adc_usart_buffer[i] = 'H';
-			adc_usart_buffer[2*i] = 'W';
+			adc_usart_buffer[(2*i) + 1]   = (char)(adc_data[i] & 0x00FF);
+			adc_usart_buffer[2*i] = (char)((adc_data[i] & 0xFF00) >> 8);
 		}
-		//usart_write_tx_buffer(USART1_settings, adc_usart_buffer, ADC_BUFFER_SIZE*2);
-		usart_write_tx_buffer(USART1_settings, usart_message, (sizeof(usart_message) - 1));
+		usart_write_tx_buffer(USART1_settings, adc_usart_buffer, (ADC_BUFFER_SIZE*2));
+//		char adc_usart_buffer[ADC_DMA_BUFFER_SIZE * 2];
+//		for (uint32_t i = 0; i < ADC_DMA_BUFFER_SIZE; i++)
+//		{
+//			adc_usart_buffer[(2*i) + 1]   = (char)(adc_dma_buff[i] & 0x00FF);
+//			adc_usart_buffer[2*i] = (char)((adc_dma_buff[i] & 0xFF00) >> 8);
+//		}
+//		usart_write_tx_buffer(USART1_settings, adc_usart_buffer, (ADC_DMA_BUFFER_SIZE*2));
+//		usart_write_tx_buffer(USART1_settings, usart_message, (sizeof(usart_message) - 1));
 		usart_start_tx(USART1_settings);
 		gpio_output(GPIOA, LED_PIN, 1);
 		delay_ms(1000);
@@ -244,14 +261,32 @@ void DMA1_Channel1_IRQHandler(void)
 	/* Half way through buffer interrupt */
 	if (DMA1->ISR & DMA_ISR_HTIF1)
 	{
+		gpio_output(GPIOA, PIN_9, 1);
+		gpio_output(GPIOA, PIN_9, 0);
 		/* Clear the interrupt flag */
 		DMA1->IFCR = DMA_IFCR_CHTIF1;
+		/* Copy the lower half of the ADC data into the data buffer */
+		for(uint8_t i = 0; i < ADC_BUFFER_SIZE; i++)
+		{
+			adc_data[i] = adc_dma_buff[i];
+		}
 	}
 	/* End of buffer interrupt */
 	else if (DMA1->ISR & DMA_ISR_TCIF1)
 	{
 		/* Clear the interrupt flag */
-		DMA1->IFCR = DMA_IFCR_CTCIF3;
+		DMA1->IFCR = DMA_IFCR_CTCIF1;
+		/* Copy the upper half of the ADC data into the data buffer */
+		for(uint8_t i = 0; i < ADC_BUFFER_SIZE; i++)
+		{
+			adc_data[i] = adc_dma_buff[ADC_BUFFER_SIZE + i];
+		}
+	}
+	if (DMA1->ISR & DMA_ISR_TEIF1)
+	{
+		/* Transfer error interrupt flag */
+		/* TODO: Actually handle this properly, for now just clear it */
+		DMA1->IFCR = DMA_IFCR_CTEIF1;
 	}
 }
 

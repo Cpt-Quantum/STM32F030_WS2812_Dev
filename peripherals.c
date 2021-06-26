@@ -5,7 +5,8 @@
 
 #include "peripherals.h"
 
-void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult)
+void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult,
+					PPRE_E APB_DIV, HPRE_E AHB_DIV)
 {
 	/* Enable the selected clock and wait for it to be ready */
 	if (external_clk == true)
@@ -42,6 +43,10 @@ void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult)
 		while(!(RCC->CR & RCC_CR_PLLRDY)){};
 	}
 
+	/* Set the clock dividers for the APB and AHB */
+	RCC->CFGR &= ~(RCC_CFGR_PPRE_Msk | RCC_CFGR_HPRE_Msk);
+	RCC->CFGR |= (APB_DIV | AHB_DIV);
+
 	/* Now set the clock source of the system clock */
 	if (use_pll == true)
 	{
@@ -61,6 +66,7 @@ void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult)
 		RCC->CFGR |= RCC_CFGR_SW_HSI;
 		while(!(RCC->CFGR & RCC_CFGR_SWS_HSI)){};
 	}
+
 }
 
 /* SysTick definitions */
