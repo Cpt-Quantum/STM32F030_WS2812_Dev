@@ -15,6 +15,11 @@ void usart_init(USART_t USART_settings)
 		RCC->APB2RSTR |=   RCC_APB2RSTR_USART1RST;
 		RCC->APB2RSTR &= ~(RCC_APB2RSTR_USART1RST);
 	}
+
+	/* Set the clock source for the USART */
+	RCC->CFGR3 &= ~(RCC_CFGR3_USART1SW_Msk);
+	RCC->CFGR3 |= USART_settings.clk_src;
+
 	/* Set the baud rate */
 	USART_settings.USARTx->BRR = USART_settings.prescaler;
 

@@ -7,9 +7,19 @@
 
 #include "circular_buffer.h"
 
+/* Type for handling the clock source of the USART */
+typedef enum
+{
+	USART_CLK_PCLK = RCC_CFGR3_USART1SW_PCLK,
+	USART_CLK_SYSCLK = RCC_CFGR3_USART1SW_SYSCLK,
+	USART_CLK_LSECLK = RCC_CFGR3_USART1SW_LSE,
+	USART_CLK_HSICLK = RCC_CFGR3_USART1SW_HSI
+} USART_CLK_SRC_E;
+
 /* Struct to hold all initialisation information/settings for a particular USART */
 typedef struct {
 	USART_TypeDef *USARTx;
+	USART_CLK_SRC_E clk_src;
 	uint16_t prescaler;
 	bool txe_interrupt_en;
 	bool rxne_interrupt_en;
