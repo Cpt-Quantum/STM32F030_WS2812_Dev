@@ -3,20 +3,34 @@
 #include "inc/stm32f030x6.h"
 
 #include "adc.h"
+#include "timer.h"
 
-void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size)
+void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size,
+				uint16_t clock_div)
 {
 	/* Enable the clock to the ADC peripheral */
 	RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
 	/* Enable the clock to the DMA peripheral */
 	RCC->AHBENR |= RCC_AHBENR_DMA1EN;
 	/* Set the clock source for the ADC to be PCLK/4 */
-	ADC1->CFGR2 &= ~(ADC_CFGR2_CKMODE_1);
+	ADC1->CFGR2 &= ~(ADC_CFGR2_CKMODE_1 | ADC_CFGR2_CKMODE_0);
 	ADC1->CFGR2 |= ADC_CFGR2_CKMODE_1;
 	/* Enable DMA transfer for ADC and enable circular mode */
-	ADC1->CFGR1 |= ADC_CFGR1_DMAEN | ADC_CFGR1_DMACFG | ADC_CFGR1_CONT;
+	ADC1->CFGR1 |= ADC_CFGR1_DMAEN | ADC_CFGR1_DMACFG;
 	/* Select the active channels */
 	ADC1->CHSELR = channel_select;
+	/* Enable external trigger on rising edge and select TIM1_TRGO as */
+	/* external trigger for ADC conversion. */
+	ADC1->CFGR1 |= ADC_CFGR1_EXTEN_0;
+
+	/* Enable timer 1 */
+	init_timer(TIM1);
+	TIM1->PSC = 0;
+	TIM1->ARR = (clock_div - 1);
+	/* Set the master mode selection of TIM1 to generate trigger output (TRGO) */
+	/* on update events that occur when the counter reaches the value in ARR   */
+	TIM1->CR2 = TIM_CR2_MMS_1;
+	TIM1->CR1 |= TIM_CR1_CEN;
 
 	/* DMA setup */
 	/* Set the peripheral address for data to be transferred from */
@@ -27,8 +41,11 @@ void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size)
 	DMA1_Channel1->CNDTR = data_size;
 	/* Set DMA config */
 	DMA1_Channel1->CCR |= (DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 |
-							DMA_CCR_TEIE | DMA_CCR_CIRC);
+							DMA_CCR_HTIE | DMA_CCR_TCIE | DMA_CCR_TEIE |
+							DMA_CCR_CIRC);
 	/* Enable the DMA interrupts for channel 1 in the NVIC */
+	NVIC_SetPriority(DMA1_Channel1_IRQn, 1);
+	NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 
 	/* Enable DMA */
 	DMA1_Channel1->CCR |= DMA_CCR_EN;
@@ -47,4 +64,3 @@ void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size)
 	/* Now start the ADC conversion */
 	ADC1->CR |= ADC_CR_ADSTART;
 }
-

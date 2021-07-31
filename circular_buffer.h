@@ -57,4 +57,20 @@ static inline void ringbuffer_read_string(ringbuffer_t *buf, char *string, uint3
 	}
 }
 
+static inline uint16_t ringbuffer_get_length(ringbuffer_t buf)
+{
+	if (buf.head > buf.tail)
+	{
+		return (buf.head - buf.tail + 1);
+	}
+	else if (buf.head < buf.tail)
+	{
+		return (buf.head + (buf.length - buf.tail) + 1);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 #endif //CIRCULAR_BUFFER_H
