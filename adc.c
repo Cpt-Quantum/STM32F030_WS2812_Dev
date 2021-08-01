@@ -5,11 +5,26 @@
 #include "adc.h"
 #include "timer.h"
 
-void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size,
-				uint16_t clock_div)
+void adc_init(ADC_t adc_settings)
 {
 	/* Enable the clock to the ADC peripheral */
 	RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
+
+	/* Calibrate the ADC */
+	/* This code is taken almost verbatim from the STM32F030 reference manual */
+	if ((ADC1->CR & ADC_CR_ADEN) != 0)
+	{
+		ADC1->CR |= ADC_CR_ADDIS;
+	}
+	while ((ADC1->CR & ADC_CR_ADEN) != 0)
+	{
+	}
+	ADC1->CFGR1 &= ~ADC_CFGR1_DMAEN;
+	ADC1->CR |= ADC_CR_ADCAL;
+	while ((ADC1->CR & ADC_CR_ADCAL) != 0)
+	{
+	}
+
 	/* Enable the clock to the DMA peripheral */
 	RCC->AHBENR |= RCC_AHBENR_DMA1EN;
 	/* Set the clock source for the ADC to be PCLK/4 */
@@ -18,7 +33,7 @@ void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size,
 	/* Enable DMA transfer for ADC and enable circular mode */
 	ADC1->CFGR1 |= ADC_CFGR1_DMAEN | ADC_CFGR1_DMACFG;
 	/* Select the active channels */
-	ADC1->CHSELR = channel_select;
+	ADC1->CHSELR = adc_settings.channel_select;
 	/* Enable external trigger on rising edge and select TIM1_TRGO as */
 	/* external trigger for ADC conversion. */
 	ADC1->CFGR1 |= ADC_CFGR1_EXTEN_0;
@@ -26,7 +41,7 @@ void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size,
 	/* Enable timer 1 */
 	init_timer(TIM1);
 	TIM1->PSC = 0;
-	TIM1->ARR = (clock_div - 1);
+	TIM1->ARR = (adc_settings.clock_div - 1);
 	/* Set the master mode selection of TIM1 to generate trigger output (TRGO) */
 	/* on update events that occur when the counter reaches the value in ARR   */
 	TIM1->CR2 = TIM_CR2_MMS_1;
@@ -36,9 +51,9 @@ void adc_init(uint32_t channel_select, uint16_t *data, uint32_t data_size,
 	/* Set the peripheral address for data to be transferred from */
 	DMA1_Channel1->CPAR = (uint32_t)(&(ADC1->DR));
 	/* Set the address of the memory object to transfer ADC data into */
-	DMA1_Channel1->CMAR = (uint32_t)(data);
+	DMA1_Channel1->CMAR = (uint32_t)(adc_settings.data);
 	/* Set the size of the buffer */
-	DMA1_Channel1->CNDTR = data_size;
+	DMA1_Channel1->CNDTR = adc_settings.data_length;
 	/* Set DMA config */
 	DMA1_Channel1->CCR |= (DMA_CCR_MINC | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 |
 							DMA_CCR_HTIE | DMA_CCR_TCIE | DMA_CCR_TEIE |

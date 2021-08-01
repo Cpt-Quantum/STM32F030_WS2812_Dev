@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /* Set whether the board uses RGB or RGBW leds */
 //#define RGBW
@@ -85,7 +86,7 @@ ringbuffer_t usart_rx_buffer = {
 USART_t USART1_settings = {
 		.USARTx = USART1,
 		.clk_src = USART_CLK_SYSCLK,
-		.prescaler = SYSCLK_FREQ/800000,
+		.prescaler = SYSCLK_FREQ/320000,
 		.txe_interrupt_en = true,
 		.rxne_interrupt_en = true,
 		.tc_interrupt_en = false,
@@ -99,6 +100,15 @@ USART_t USART1_settings = {
 #define ADC_BUFFER_SIZE (ADC_DMA_BUFFER_SIZE/2)
 uint16_t adc_dma_buff[ADC_DMA_BUFFER_SIZE];
 uint16_t adc_data[ADC_BUFFER_SIZE];
+
+/* Initialise the struct for the ADC settings */
+ADC_t ADC_settings = {
+	.channel_select = (1 << 6),
+	.data = adc_dma_buff,
+	.data_length = ADC_DMA_BUFFER_SIZE,
+	.clock_div = ADC_CLK_DIV,
+	.callback = NULL
+};
 
 
 static inline char convert_adc_data(uint16_t adc_data)
@@ -155,8 +165,7 @@ int main(void)
 	gpio_init(GPIOA, PIN_6, GPIO_ANALOGUE, GPIO_AF0, GPIO_LOW_SPEED);
 	/* Now enable the ADC */
 	uint32_t channel_select = 1 << 6;
-	adc_init(channel_select, adc_dma_buff, ADC_DMA_BUFFER_SIZE,
-				ADC_CLK_DIV);
+	adc_init(ADC_settings);
 //	uint32_t timer_div = 0x00047FFF;
 //	init_timer(TIM1);
 //	TIM1->PSC = ((timer_div & 0xFFFF0000) >> 16) - 1;
