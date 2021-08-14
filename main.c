@@ -173,7 +173,7 @@ int main(void)
 	gpio_init(GPIOB, PIN_1, GPIO_ALT_MODE, GPIO_AF1, GPIO_HIGH_SPEED);
 
 	/* Enable USART1 */
-	usart_init(USART1_settings);
+	usart_init(&USART1_settings);
 
 	/* Setup the SysTick peripheral for 1ms ticks */
 	SysTick_Config(AHB_FREQ / 1000);
@@ -278,41 +278,6 @@ void SysTick_Handler(void)
 	systick = systick + 1;
 }
 
-///* This DMA interrupt handler is used by the ADC to copy data to a buffer */
-//void DMA1_Channel1_IRQHandler(void)
-//{
-//	/* Half way through buffer interrupt */
-//	if (DMA1->ISR & DMA_ISR_HTIF1)
-//	{
-//		/* Clear the interrupt flag */
-//		DMA1->IFCR = DMA_IFCR_CHTIF1;
-//		/* Copy the lower half of the ADC data into the data buffer */
-//		for (uint8_t i = 0; i < ADC_BUFFER_SIZE; i++)
-//		{
-//			adc_data[i] = adc_dma_buff[i];
-//		}
-//		adc_callback();
-//	}
-//	/* End of buffer interrupt */
-//	else if (DMA1->ISR & DMA_ISR_TCIF1)
-//	{
-//		/* Clear the interrupt flag */
-//		DMA1->IFCR = DMA_IFCR_CTCIF1;
-//		/* Copy the upper half of the ADC data into the data buffer */
-//		for (uint8_t i = 0; i < ADC_BUFFER_SIZE; i++)
-//		{
-//			adc_data[i] = adc_dma_buff[ADC_BUFFER_SIZE + i];
-//		}
-//		adc_callback();
-//	}
-//	if (DMA1->ISR & DMA_ISR_TEIF1)
-//	{
-//		/* Transfer error interrupt flag */
-//		/* TODO: Actually handle this properly, for now just clear it */
-//		DMA1->IFCR = DMA_IFCR_CTEIF1;
-//	}
-//}
-
 /* This DMA interrupt handler is used by timer 3 for the WS2812 LEDs */
 #if defined RGB || defined RGBW
 void DMA1_Channel2_3_IRQHandler(void)
@@ -343,42 +308,3 @@ void DMA1_Channel2_3_IRQHandler(void)
 	}
 }
 #endif
-
-void USART1_IRQHandler(void)
-{
-	/* Check for TX register empty interrupt flag */
-	if (USART1->ISR & USART_ISR_TXE)
-	{
-		/* Output next character in the ringbuffer */
-		char temp = ringbuffer_read(USART1_settings.tx_buffer);
-		/* Check for an empty buffer, if so disable the transmit */
-		if (USART1_settings.tx_buffer->buffer_empty)
-		{
-			/* Disable the transmit buffer empty interrupt */
-			/* This means we don't have to clear it */
-			USART1->CR1 &= ~(USART_CR1_TXEIE);
-		}
-		else
-		{
-			/* Only write to the transfer register if the buffer isn't empty */
-			USART1->TDR = temp;
-		}
-	}
-	/* Check for RX register not empty interrupt flag */
-	if (USART1->ISR & USART_ISR_RXNE)
-	{
-		char temp = USART1->RDR;
-		ringbuffer_write(USART1_settings.rx_buffer, temp);
-	}
-	/* Check for transmit complete interrupt flag */
-	if (USART1->ISR & USART_ISR_TC)
-	{
-		///* Clear the interrupt flag */
-		USART1->ICR = USART_ICR_TCCF;
-	}
-	/* Check for overrun error interrupt flag and clear it if it has tripped */
-	if (USART1->ISR & USART_ISR_ORE)
-	{
-		USART1->ICR = USART_ICR_ORECF;
-	}
-}
