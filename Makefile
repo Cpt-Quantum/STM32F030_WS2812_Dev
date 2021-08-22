@@ -44,6 +44,7 @@ C_SRC += ./adc.c
 C_SRC += ./timer.c
 C_SRC += ./usart.c
 C_SRC += ./ws2812.c
+C_SRC += ./avg.c
 
 OBJS = $(STARTUP:.s=.o)
 OBJS += $(C_SRC:.c=.o)
