@@ -14,8 +14,8 @@ typedef struct
 	bool first_cycle;
 } moving_avg_t;
 
-uint16_t average(uint16_t *data_in, uint16_t data_length);
-uint16_t power_average(uint16_t *data_in, uint16_t data_length);
-uint16_t moving_average(moving_avg_t *moving_avg_buffer, uint16_t new_samp);
+uint32_t average(uint16_t *data_in, uint16_t data_length);
+uint32_t power_average(uint16_t *data_in, uint16_t data_length);
+uint32_t moving_average(moving_avg_t *moving_avg_buffer, uint16_t new_samp);
 
 #endif /* AVG_G */

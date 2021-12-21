@@ -3,7 +3,7 @@
 
 #include "avg.h"
 
-uint16_t average(uint16_t *data_in, uint16_t data_length)
+uint32_t average(uint16_t *data_in, uint16_t data_length)
 {
 	/* Use an oversized intermediate type to avoid overflows from adding multiple values */
 	uint32_t avg = 0;
@@ -15,7 +15,7 @@ uint16_t average(uint16_t *data_in, uint16_t data_length)
 	return ((uint16_t)avg);
 }
 
-uint16_t power_average(uint16_t *data_in, uint16_t data_length)
+uint32_t power_average(uint16_t *data_in, uint16_t data_length)
 {
 	/* Use an oversized intermediate type to avoid overflows from adding multiple values */
 	uint32_t power = 0;
@@ -26,9 +26,9 @@ uint16_t power_average(uint16_t *data_in, uint16_t data_length)
 	return ((uint16_t)(power / data_length));
 }
 
-uint16_t moving_average(moving_avg_t *moving_avg_buffer, uint16_t new_samp)
+uint32_t moving_average(moving_avg_t *moving_avg_buffer, uint16_t new_samp)
 {
-	uint16_t avg = 0;
+	uint32_t avg = 0;
 	if (moving_avg_buffer->first_cycle == true)
 	{
 		/* Add new sample to the sample buffer */
