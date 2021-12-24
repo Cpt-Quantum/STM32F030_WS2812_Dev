@@ -123,84 +123,13 @@ uint32_t power_avg = 0;
 #define SIGNAL_GAIN 1
 #define SIGNAL_NORMALISATION (50000 / SIGNAL_GAIN)
 
+/* Register callback for button reading */
+bool button_state_update(GPIO_TypeDef *GPIOx, GPIO_PIN_E pin_num);
+
 /* Register callback function for the ADC interrupt */
 /* Note that this will be called twice per full buffer cycle, as it's called */
 /* for both the half full and full buffer interrupts. */
-void adc_callback(ADC_STATUS_E adc_status)
-{
-	//	gpio_output(GPIOA, PIN_9, 1);
-	//	gpio_output(GPIOA, PIN_9, 0);
-	//char adc_data_formatted[ADC_BUFFER_SIZE];
-	char adc_data_formatted[2 * ADC_BUFFER_SIZE];
-	uint32_t avg = 0;
-	uint32_t moving_avg = 0;
-	int16_t detrend_data_buff;
-	uint32_t power = 0;
-	static uint8_t adc_interrupt_count = 0;
-	if (adc_status == ADC_BUFFER_FULL)
-	{
-		adc_interrupt_count += 1;
-		/* Calculate the average of the input samples */
-		avg = average(&adc_dma_buff[ADC_BUFFER_SIZE], ADC_BUFFER_SIZE);
-		/* Add this average to the moving average buffer */
-		moving_avg = moving_average(&average_10Hz, avg);
-		/* Copy top half to buffer */
-		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
-		{
-			/* Use the moving average to detrend the data before adding it to the USART output buffer */
-			detrend_data_buff = (int16_t)(adc_dma_buff[i + ADC_BUFFER_SIZE] - moving_avg);
-			power += (uint32_t)(detrend_data_buff * detrend_data_buff);
-			//adc_data_formatted[(2 * i)] = (char)(detrend_data_buff & 0x00FF);
-			//adc_data_formatted[(2 * i) + 1] = (char)((detrend_data_buff & 0xFF00) >> 8);
-			//adc_data_formatted[(2 * i)] = (char)(adc_dma_buff[i + ADC_BUFFER_SIZE] & 0x00FF);
-			//adc_data_formatted[(2 * i) + 1] = (char)((adc_dma_buff[i + ADC_BUFFER_SIZE] & 0xFF00) >> 8);
-		}
-	}
-	else if (adc_status == ADC_BUFFER_HALF_FULL)
-	{
-		adc_interrupt_count += 1;
-		/* Calculate the average of the input samples */
-		avg = average(&adc_dma_buff[0], ADC_BUFFER_SIZE);
-		/* Add this average to the moving average buffer */
-		moving_avg = moving_average(&average_10Hz, avg);
-		/* Copy bottom half to buffer */
-		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
-		{
-			/* Use the moving average to detrend the data before adding it to the USART output buffer */
-			detrend_data_buff = (int16_t)(adc_dma_buff[i] - moving_avg);
-			power += (uint32_t)(detrend_data_buff * detrend_data_buff);
-			//adc_data_formatted[(2 * i)] = (char)(detrend_data_buff & 0x00FF);
-			//adc_data_formatted[(2 * i) + 1] = (char)((detrend_data_buff & 0xFF00) >> 8);
-			//adc_data_formatted[(2 * i)] = (char)(adc_dma_buff[i] & 0x00FF);
-			//adc_data_formatted[(2 * i) + 1] = (char)((adc_dma_buff[i] & 0xFF00) >> 8);
-		}
-	}
-	/* Calculate the average for power over this data set */
-	power_avg += power / ADC_BUFFER_SIZE;
-	if (adc_interrupt_count >= POWER_AVG_CYCLES)
-	{
-		/* Rescale the power by the number of cycles */
-		power_avg = power_avg / POWER_AVG_CYCLES;
-
-		/* Send out the power_avg value over USART for debugging */
-		char power_formatted[10];
-		uint32_to_string(power_formatted, power_avg);
-		//usart_write_tx_buffer(USART1_settings, power_formatted,
-		//					  sizeof(power_formatted) / sizeof(power_formatted[0]));
-		//usart_write_tx_buffer(USART1_settings, "\n\r", 2);
-		//usart_start_tx(USART1_settings);
-
-		/* Call LED update routine */
-		led_rgbw_intensity(&leds, power_avg, SIGNAL_NORMALISATION);
-		//led_rgbw_adc_intensity(&leds, 20, SIGNAL_NORMALISATION);
-
-		/* Reset variables */
-		power_avg = 0;
-		adc_interrupt_count = 0;
-	}
-	//usart_write_tx_buffer(USART1_settings, adc_data_formatted, 2 * ADC_BUFFER_SIZE);
-	//usart_start_tx(USART1_settings);
-}
+void adc_callback(ADC_STATUS_E adc_status);
 
 /* Initialise the struct for the ADC settings */
 ADC_t ADC_settings = {
@@ -349,6 +278,7 @@ void TIM3_IRQHandler(void)
 void SysTick_Handler(void)
 {
 	systick = systick + 1;
+	button_state_update(GPIOA, BTN_PIN);
 }
 
 /* This DMA interrupt handler is used by timer 3 for the WS2812 LEDs */
@@ -380,4 +310,101 @@ void DMA1_Channel2_3_IRQHandler(void)
 		DMA1->IFCR = DMA_IFCR_CTCIF3;
 	}
 }
+
+/* Callback functions */
+bool button_state_update(GPIO_TypeDef *GPIOx, GPIO_PIN_E pin_num)
+{
+	static uint16_t button_accumulator = 0;
+	static bool button_state = false;
+
+	button_accumulator = (button_accumulator << 1) | gpio_read(GPIOA, BTN_PIN) | 0xE000;
+
+	if (button_accumulator == 0xF000)
+	{
+		/* Send the button value out over USART for debugging */
+		usart_write_tx_buffer(USART1_settings, "Button pushed", 14);
+		usart_write_tx_buffer(USART1_settings, "\n\r", 2);
+		usart_start_tx(USART1_settings);
+
+		return true;
+	}
+	return false;
+}
+
+void adc_callback(ADC_STATUS_E adc_status)
+{
+	//	gpio_output(GPIOA, PIN_9, 1);
+	//	gpio_output(GPIOA, PIN_9, 0);
+	//char adc_data_formatted[ADC_BUFFER_SIZE];
+	char adc_data_formatted[2 * ADC_BUFFER_SIZE];
+	uint32_t avg = 0;
+	uint32_t moving_avg = 0;
+	int16_t detrend_data_buff;
+	uint32_t power = 0;
+	static uint8_t adc_interrupt_count = 0;
+	if (adc_status == ADC_BUFFER_FULL)
+	{
+		adc_interrupt_count += 1;
+		/* Calculate the average of the input samples */
+		avg = average(&adc_dma_buff[ADC_BUFFER_SIZE], ADC_BUFFER_SIZE);
+		/* Add this average to the moving average buffer */
+		moving_avg = moving_average(&average_10Hz, avg);
+		/* Copy top half to buffer */
+		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
+		{
+			/* Use the moving average to detrend the data before adding it to the USART output buffer */
+			detrend_data_buff = (int16_t)(adc_dma_buff[i + ADC_BUFFER_SIZE] - moving_avg);
+			power += (uint32_t)(detrend_data_buff * detrend_data_buff);
+			//adc_data_formatted[(2 * i)] = (char)(detrend_data_buff & 0x00FF);
+			//adc_data_formatted[(2 * i) + 1] = (char)((detrend_data_buff & 0xFF00) >> 8);
+			//adc_data_formatted[(2 * i)] = (char)(adc_dma_buff[i + ADC_BUFFER_SIZE] & 0x00FF);
+			//adc_data_formatted[(2 * i) + 1] = (char)((adc_dma_buff[i + ADC_BUFFER_SIZE] & 0xFF00) >> 8);
+		}
+	}
+	else if (adc_status == ADC_BUFFER_HALF_FULL)
+	{
+		adc_interrupt_count += 1;
+		/* Calculate the average of the input samples */
+		avg = average(&adc_dma_buff[0], ADC_BUFFER_SIZE);
+		/* Add this average to the moving average buffer */
+		moving_avg = moving_average(&average_10Hz, avg);
+		/* Copy bottom half to buffer */
+		for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++)
+		{
+			/* Use the moving average to detrend the data before adding it to the USART output buffer */
+			detrend_data_buff = (int16_t)(adc_dma_buff[i] - moving_avg);
+			power += (uint32_t)(detrend_data_buff * detrend_data_buff);
+			//adc_data_formatted[(2 * i)] = (char)(detrend_data_buff & 0x00FF);
+			//adc_data_formatted[(2 * i) + 1] = (char)((detrend_data_buff & 0xFF00) >> 8);
+			//adc_data_formatted[(2 * i)] = (char)(adc_dma_buff[i] & 0x00FF);
+			//adc_data_formatted[(2 * i) + 1] = (char)((adc_dma_buff[i] & 0xFF00) >> 8);
+		}
+	}
+	/* Calculate the average for power over this data set */
+	power_avg += power / ADC_BUFFER_SIZE;
+	if (adc_interrupt_count >= POWER_AVG_CYCLES)
+	{
+		/* Rescale the power by the number of cycles */
+		power_avg = power_avg / POWER_AVG_CYCLES;
+
+		/* Send out the power_avg value over USART for debugging */
+		char power_formatted[10];
+		uint32_to_string(power_formatted, power_avg);
+		//usart_write_tx_buffer(USART1_settings, power_formatted,
+		//					  sizeof(power_formatted) / sizeof(power_formatted[0]));
+		//usart_write_tx_buffer(USART1_settings, "\n\r", 2);
+		//usart_start_tx(USART1_settings);
+
+		/* Call LED update routine */
+		led_rgbw_intensity(&leds, power_avg, SIGNAL_NORMALISATION);
+		//led_rgbw_adc_intensity(&leds, 20, SIGNAL_NORMALISATION);
+
+		/* Reset variables */
+		power_avg = 0;
+		adc_interrupt_count = 0;
+	}
+	//usart_write_tx_buffer(USART1_settings, adc_data_formatted, 2 * ADC_BUFFER_SIZE);
+	//usart_start_tx(USART1_settings);
+}
+
 #endif

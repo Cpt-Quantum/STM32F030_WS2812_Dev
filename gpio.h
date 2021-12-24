@@ -16,16 +16,16 @@ typedef enum
 
 typedef enum
 {
-	PIN_0  =  0,
-	PIN_1  =  1,
-	PIN_2  =  2,
-	PIN_3  =  3,
-	PIN_4  =  4,
-	PIN_5  =  5,
-	PIN_6  =  6,
-	PIN_7  =  7,
-	PIN_8  =  8,
-	PIN_9  =  9,
+	PIN_0 = 0,
+	PIN_1 = 1,
+	PIN_2 = 2,
+	PIN_3 = 3,
+	PIN_4 = 4,
+	PIN_5 = 5,
+	PIN_6 = 6,
+	PIN_7 = 7,
+	PIN_8 = 8,
+	PIN_9 = 9,
 	PIN_10 = 10,
 	PIN_11 = 11,
 	PIN_12 = 12,
@@ -55,8 +55,9 @@ typedef enum
 } GPIO_SPEED_E;
 
 void gpio_init(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_mode,
-				GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed);
+			   GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed);
 
 void gpio_output(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, uint8_t value);
+uint8_t gpio_read(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin);
 
-#endif //GPIO_H
+#endif // GPIO_H

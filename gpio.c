@@ -6,7 +6,7 @@
 #include "gpio.h"
 
 void gpio_init(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_mode,
-				GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed)
+			   GPIO_ALT_MODE_E gpio_af, GPIO_SPEED_E gpio_speed)
 {
 	/* Enable the clock to the specified port */
 	if (GPIOx == GPIOA)
@@ -36,8 +36,8 @@ void gpio_init(GPIO_TypeDef *GPIOx, const GPIO_PIN_E io_pin, GPIO_MODER_E gpio_m
 	/* If the specified GPIO mode is for the alternate function, set the alternate function */
 	if (gpio_mode == GPIO_ALT_MODE)
 	{
-		GPIOx->AFR[io_pin/8] &= ~(GPIO_AF_MAX << ((io_pin & 0x07) * 4));
-		GPIOx->AFR[io_pin/8] |= (gpio_af << ((io_pin & 0x07) * 4));
+		GPIOx->AFR[io_pin / 8] &= ~(GPIO_AF_MAX << ((io_pin & 0x07) * 4));
+		GPIOx->AFR[io_pin / 8] |= (gpio_af << ((io_pin & 0x07) * 4));
 	}
 
 	/* Set the gpio speed */
@@ -52,5 +52,10 @@ void gpio_output(GPIO_TypeDef *GPIOx, const GPIO_PIN_E gpio_pin, uint8_t value)
 	/* This detail is handled by the shift left on input value logic */
 	/* TODO: & value with 0x01 to ensure the input value is 1 or 0? */
 	/* TODO: Alternatively make a GPIO pin value enum with only 1 or 0 as options */
-	GPIOx->BSRR = ((1 << gpio_pin) << (16 * (!value))); 
+	GPIOx->BSRR = ((1 << gpio_pin) << (16 * (!value)));
+}
+
+uint8_t gpio_read(GPIO_TypeDef *GPIOx, const GPIO_PIN_E gpio_pin)
+{
+	return ((GPIOx->IDR >> gpio_pin) & 0x00000001);
 }
