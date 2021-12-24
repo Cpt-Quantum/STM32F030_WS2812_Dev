@@ -1,8 +1,8 @@
 #include "inc/stm32f030x6.h"
 
 #include "ws2812.h"
-#include "peripherals.h"
-#include "timer.h"
+#include "headers/peripherals.h"
+#include "headers/timer.h"
 
 #include <stdint.h>
 #include <stdbool.h>

@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct {
+typedef struct
+{
 	volatile char *buffer;
 	uint16_t length;
 	uint16_t head;
@@ -43,7 +44,7 @@ static inline char ringbuffer_read(ringbuffer_t *buf)
 
 static inline void ringbuffer_write_string(ringbuffer_t *buf, char *string, uint32_t length)
 {
-	for(uint32_t i = 0; i < length; i++)
+	for (uint32_t i = 0; i < length; i++)
 	{
 		ringbuffer_write(buf, string[i]);
 	}
@@ -51,7 +52,7 @@ static inline void ringbuffer_write_string(ringbuffer_t *buf, char *string, uint
 
 static inline void ringbuffer_read_string(ringbuffer_t *buf, char *string, uint32_t length)
 {
-	for(uint32_t i = 0; i < length; i++)
+	for (uint32_t i = 0; i < length; i++)
 	{
 		string[i] = ringbuffer_read(buf);
 	}

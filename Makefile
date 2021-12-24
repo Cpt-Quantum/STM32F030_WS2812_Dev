@@ -38,11 +38,11 @@ LFLAGS += -T$(LSCRIPT)
 
 STARTUP = ./startup.s
 C_SRC = ./main.c
-C_SRC += ./peripherals.c
-C_SRC += ./gpio.c
-C_SRC += ./adc.c
-C_SRC += ./timer.c
-C_SRC += ./usart.c
+C_SRC += ./headers/peripherals.c
+C_SRC += ./headers/gpio.c
+C_SRC += ./headers/adc.c
+C_SRC += ./headers/timer.c
+C_SRC += ./headers/usart.c
 C_SRC += ./ws2812.c
 C_SRC += ./avg.c
 C_SRC += ./string_format.c

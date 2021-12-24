@@ -1,4 +1,4 @@
-#include "inc/stm32f030x6.h"
+#include "../inc/stm32f030x6.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -6,18 +6,22 @@
 #include "peripherals.h"
 
 void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult,
-					PPRE_E APB_DIV, HPRE_E AHB_DIV)
+				 PPRE_E APB_DIV, HPRE_E AHB_DIV)
 {
 	/* Enable the selected clock and wait for it to be ready */
 	if (external_clk == true)
 	{
 		RCC->CR |= RCC_CR_HSEON;
-		while(!(RCC->CR & RCC_CR_HSERDY)){};
+		while (!(RCC->CR & RCC_CR_HSERDY))
+		{
+		};
 	}
 	else
 	{
 		RCC->CR |= RCC_CR_HSION;
-		while(!(RCC->CR & RCC_CR_HSIRDY)){};
+		while (!(RCC->CR & RCC_CR_HSIRDY))
+		{
+		};
 	}
 
 	/* Now enable the PLL if needed */
@@ -40,7 +44,9 @@ void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult,
 
 		/* Turn on the PLL and wait for the hardware to set the ready flag */
 		RCC->CR |= RCC_CR_PLLON;
-		while(!(RCC->CR & RCC_CR_PLLRDY)){};
+		while (!(RCC->CR & RCC_CR_PLLRDY))
+		{
+		};
 	}
 
 	/* Set the clock dividers for the APB and AHB */
@@ -52,21 +58,26 @@ void clock_setup(bool external_clk, bool use_pll, PLL_MULT_E pll_mult,
 	{
 		RCC->CFGR &= ~(RCC_CFGR_SW);
 		RCC->CFGR |= RCC_CFGR_SW_PLL;
-		while(!(RCC->CFGR & RCC_CFGR_SWS_PLL)){};
+		while (!(RCC->CFGR & RCC_CFGR_SWS_PLL))
+		{
+		};
 	}
 	else if (external_clk == true)
 	{
 		RCC->CFGR &= ~(RCC_CFGR_SW);
 		RCC->CFGR |= RCC_CFGR_SW_HSE;
-		while(!(RCC->CFGR & RCC_CFGR_SWS_HSE)){};
+		while (!(RCC->CFGR & RCC_CFGR_SWS_HSE))
+		{
+		};
 	}
 	else if (external_clk == false)
 	{
 		RCC->CFGR &= ~(RCC_CFGR_SW);
 		RCC->CFGR |= RCC_CFGR_SW_HSI;
-		while(!(RCC->CFGR & RCC_CFGR_SWS_HSI)){};
+		while (!(RCC->CFGR & RCC_CFGR_SWS_HSI))
+		{
+		};
 	}
-
 }
 
 /* SysTick definitions */
@@ -74,10 +85,9 @@ volatile uint32_t systick = 0;
 
 void delay_ms(uint32_t ms)
 {
-        uint32_t cycle_count = systick + ms;
-        while(systick < cycle_count)
-        {
-                __asm__("WFI");
-        }
+	uint32_t cycle_count = systick + ms;
+	while (systick < cycle_count)
+	{
+		__asm__("WFI");
+	}
 }
-

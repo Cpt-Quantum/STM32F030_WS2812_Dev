@@ -3,7 +3,7 @@
 
 #include "inc/stm32f030x6.h"
 
-#include "peripherals.h"
+#include "headers/peripherals.h"
 
 #include <stdint.h>
 #include <stdbool.h>

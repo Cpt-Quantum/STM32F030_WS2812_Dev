@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "inc/stm32f030x6.h"
+#include "../inc/stm32f030x6.h"
 
 #include "adc.h"
 #include "timer.h"
