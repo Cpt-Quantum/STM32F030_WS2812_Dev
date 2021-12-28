@@ -46,6 +46,7 @@ C_SRC += ./headers/usart.c
 C_SRC += ./ws2812.c
 C_SRC += ./avg.c
 C_SRC += ./string_format.c
+C_SRC += ./button.c
 
 OBJS = $(STARTUP:.s=.o)
 OBJS += $(C_SRC:.c=.o)
