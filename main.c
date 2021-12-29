@@ -143,6 +143,8 @@ button_t button_1 = {
 	.accumulator = 0,
 };
 
+LED_EFFECT_E current_led_effect = LED_OFF;
+
 int main(void)
 {
 	/* Initialisation */
@@ -288,6 +290,11 @@ void SysTick_Handler(void)
 		usart_write_tx_buffer(USART1_settings, "Button pushed", 14);
 		usart_write_tx_buffer(USART1_settings, "\n\r", 2);
 		usart_start_tx(USART1_settings);
+
+		/* Update the current led effect and switch to the appropriate display function */
+		//current_led_effect++;
+		current_led_effect = LED_STATIC_PURPLE;
+		//led_update_effect(&leds, current_led_effect, 50);
 	}
 }
 
@@ -387,8 +394,8 @@ void adc_callback(ADC_STATUS_E adc_status)
 		// usart_start_tx(USART1_settings);
 
 		/* Call LED update routine */
-		led_rgbw_intensity(&leds, power_avg, SIGNAL_NORMALISATION);
-		// led_rgbw_adc_intensity(&leds, 20, SIGNAL_NORMALISATION);
+		// led_rgbw_intensity(&leds, power_avg, SIGNAL_NORMALISATION);
+		//  led_rgbw_adc_intensity(&leds, 20, SIGNAL_NORMALISATION);
 
 		/* Reset variables */
 		power_avg = 0;

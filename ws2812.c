@@ -14,6 +14,11 @@
 #define DATA_0_LOW 41
 #define DATA_0_PERIOD (DATA_0_HIGH + DATA_0_LOW)
 
+/* Defaults for LED effects */
+#define LED_PULSE_SPEED_DEFAULT 10
+#define LED_BREATHE_STEPS_DEFAULT 10
+#define LED_BREATHE_DELAY_DEFAULT 100
+
 /* This buffer is used to store capture/compare values for the timer */
 uint16_t CCR_buffer[DMA_BUFF_SIZE];
 
@@ -122,8 +127,8 @@ void led_rgbw_write_pixel(led_t *leds, uint16_t pixel, uint8_t red,
 	leds->data[(4 * pixel) + 3] = white;
 }
 
-void led_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
-						uint8_t max_blue, uint8_t steps, uint32_t delay)
+void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
+							uint8_t max_blue, uint8_t steps, uint32_t delay)
 {
 	for (uint8_t j = steps; j > 0; j--)
 	{
@@ -149,10 +154,10 @@ void led_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
 	}
 }
 
-void led_pulse(led_t *leds, uint8_t background_red,
-			   uint8_t background_green, uint8_t background_blue,
-			   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
-			   uint32_t pulse_move_speed_ms)
+void led_rgb_pulse(led_t *leds, uint8_t background_red,
+				   uint8_t background_green, uint8_t background_blue,
+				   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
+				   uint32_t pulse_move_speed_ms)
 {
 	/* Initialise background colour */
 	led_rgb_write_all(leds, background_red, background_green, background_blue);
@@ -208,6 +213,35 @@ void led_rgbw_pulse(led_t *leds,
 							 pulse_white);
 		led_show(leds, TIM3);
 		delay_ms(pulse_move_speed_ms);
+	}
+}
+
+void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
+							 uint8_t max_blue, uint8_t max_white, uint8_t steps, uint32_t delay)
+{
+	for (uint8_t j = steps; j > 0; j--)
+	{
+		for (uint16_t i = 0; i < leds->num_leds; i++)
+		{
+			leds->data[(3 * i)] = max_green / j;
+			leds->data[(3 * i) + 1] = max_red / j;
+			leds->data[(3 * i) + 2] = max_blue / j;
+			leds->data[(3 * i) + 3] = max_white / j;
+		}
+		led_show(leds, TIM3);
+		delay_ms(delay);
+	}
+	for (uint8_t j = 0; j < steps; j++)
+	{
+		for (uint16_t i = 0; i < leds->num_leds; i++)
+		{
+			leds->data[(3 * i)] = max_green / j;
+			leds->data[(3 * i) + 1] = max_red / j;
+			leds->data[(3 * i) + 2] = max_blue / j;
+			leds->data[(3 * i) + 3] = max_white / j;
+		}
+		led_show(leds, TIM3);
+		delay_ms(delay);
 	}
 }
 
@@ -298,6 +332,252 @@ void led_init(void)
 
 	/* Setup the timer for capture/compare mode */
 	setup_timer_capture_compare(TIM3, TIM_CHAN_4, DATA_1_PERIOD, 0, 0, false, true);
+}
+
+void led_update_effect(led_t *leds, LED_EFFECT_E led_effect, uint8_t brightness)
+{
+	/* Check the format of the LEDs */
+	switch (leds->data_format)
+	{
+	case LED_GRB:
+		switch (led_effect)
+		{
+		case LED_OFF:
+			led_rgb_write_all(leds, 0, 0, 0);
+			break;
+		case LED_PULSE_RED:
+			led_rgb_pulse(leds,
+						  brightness, 0, 0,
+						  (brightness * 2), 0, 0,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_GREEN:
+			led_rgb_pulse(leds,
+						  0, brightness, 0,
+						  0, (brightness * 2), 0,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_BLUE:
+			led_rgb_pulse(leds,
+						  0, 0, brightness,
+						  0, 0, (brightness * 2),
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_WHITE:
+			led_rgb_pulse(leds,
+						  brightness / 3, brightness / 3, brightness / 3,
+						  (brightness * 2) / 3, (brightness * 2) / 3, (brightness * 2) / 3,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_ORANGE:
+			led_rgb_pulse(leds,
+						  brightness / 2, brightness / 2, 0,
+						  (brightness * 2) / 2, (brightness * 2) / 2, 0,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_PURPLE:
+			led_rgb_pulse(leds,
+						  brightness / 2, 0, brightness / 2,
+						  (brightness * 2) / 2, 0, (brightness * 2) / 2,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_YELLOW:
+			led_rgb_pulse(leds,
+						  0, brightness / 2, brightness / 2,
+						  0, (brightness * 2) / 2, (brightness * 2) / 2,
+						  LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_CUSTOM:
+			break;
+		case LED_BREATHE_RED:
+			led_rgb_breathe_effect(leds,
+								   brightness, 0, 0,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_GREEN:
+			led_rgb_breathe_effect(leds,
+								   0, brightness, 0,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_BLUE:
+			led_rgb_breathe_effect(leds,
+								   0, 0, brightness,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_WHITE:
+			led_rgb_breathe_effect(leds,
+								   brightness / 3, brightness / 3, brightness / 3,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_ORANGE:
+			led_rgb_breathe_effect(leds,
+								   brightness / 2, brightness / 2, 0,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_PURPLE:
+			led_rgb_breathe_effect(leds,
+								   brightness / 2, 0, brightness / 2,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_YELLOW:
+			led_rgb_breathe_effect(leds,
+								   0, brightness / 2, brightness / 2,
+								   LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_CUSTOM:
+			break;
+		case LED_STATIC_RED:
+			led_rgb_write_all(leds,
+							  brightness, 0, 0);
+			break;
+		case LED_STATIC_GREEN:
+			led_rgb_write_all(leds,
+							  0, brightness, 0);
+			break;
+		case LED_STATIC_BLUE:
+			led_rgb_write_all(leds,
+							  0, 0, brightness);
+			break;
+		case LED_STATIC_WHITE:
+			led_rgb_write_all(leds,
+							  brightness / 3, brightness / 3, brightness / 3);
+			break;
+		case LED_STATIC_ORANGE:
+			led_rgb_write_all(leds,
+							  brightness / 2, brightness / 2, 0);
+			break;
+		case LED_STATIC_PURPLE:
+			led_rgb_write_all(leds,
+							  brightness / 2, 0, brightness / 2);
+			break;
+		case LED_STATIC_YELLOW:
+			led_rgb_write_all(leds,
+							  0, brightness / 2, brightness / 2);
+			break;
+		case LED_STATIC_CUSTOM:
+			break;
+		}
+		break;
+	case LED_RGBW:
+		switch (led_effect)
+		{
+		case LED_OFF:
+			led_rgbw_write_all(leds, 0, 0, 0, 0);
+			break;
+		case LED_PULSE_RED:
+			led_rgbw_pulse(leds,
+						   brightness, 0, 0, 0,
+						   (brightness * 2), 0, 0, 0,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_GREEN:
+			led_rgbw_pulse(leds,
+						   0, brightness, 0, 0,
+						   0, (brightness * 2), 0, 0,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_BLUE:
+			led_rgbw_pulse(leds,
+						   0, 0, brightness, 0,
+						   0, 0, (brightness * 2), 0,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_WHITE:
+			led_rgbw_pulse(leds,
+						   0, 0, 0, brightness,
+						   0, 0, 0, brightness * 2,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_ORANGE:
+			led_rgbw_pulse(leds,
+						   brightness / 2, brightness / 2, 0, 0,
+						   (brightness * 2) / 2, (brightness * 2) / 2, 0, 0,
+						   LED_PULSE_SPEED_DEFAULT);
+
+			break;
+		case LED_PULSE_PURPLE:
+			led_rgbw_pulse(leds,
+						   brightness / 2, 0, brightness / 2, 0,
+						   (brightness * 2) / 2, 0, (brightness * 2) / 2, 0,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_YELLOW:
+			led_rgbw_pulse(leds,
+						   0, brightness / 2, brightness / 2, 0,
+						   0, (brightness * 2) / 2, (brightness * 2) / 2, 0,
+						   LED_PULSE_SPEED_DEFAULT);
+			break;
+		case LED_PULSE_CUSTOM:
+			break;
+		case LED_BREATHE_RED:
+			led_rgbw_breathe_effect(leds,
+									brightness, 0, 0, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_GREEN:
+			led_rgbw_breathe_effect(leds,
+									0, brightness, 0, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_BLUE:
+			led_rgbw_breathe_effect(leds,
+									0, 0, brightness, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_WHITE:
+			led_rgbw_breathe_effect(leds,
+									0, 0, 0, brightness,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_ORANGE:
+			led_rgbw_breathe_effect(leds,
+									brightness / 2, brightness / 2, 0, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_PURPLE:
+			led_rgbw_breathe_effect(leds,
+									brightness / 2, 0, brightness / 2, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_YELLOW:
+			led_rgbw_breathe_effect(leds,
+									0, brightness / 2, brightness / 2, 0,
+									LED_BREATHE_STEPS_DEFAULT, LED_BREATHE_DELAY_DEFAULT);
+			break;
+		case LED_BREATHE_CUSTOM:
+			break;
+		case LED_STATIC_RED:
+			led_rgbw_write_all(leds,
+							   brightness, 0, 0, 0);
+			break;
+		case LED_STATIC_GREEN:
+			led_rgbw_write_all(leds,
+							   0, brightness, 0, 0);
+			break;
+		case LED_STATIC_BLUE:
+			led_rgbw_write_all(leds,
+							   0, 0, brightness, 0);
+			break;
+		case LED_STATIC_WHITE:
+			led_rgbw_write_all(leds,
+							   0, 0, 0, brightness);
+			break;
+		case LED_STATIC_ORANGE:
+			led_rgbw_write_all(leds,
+							   brightness / 2, brightness / 2, 0, 0);
+			break;
+		case LED_STATIC_PURPLE:
+			led_rgbw_write_all(leds,
+							   brightness / 2, 0, brightness / 2, 0);
+			break;
+		case LED_STATIC_YELLOW:
+			led_rgbw_write_all(leds,
+							   0, brightness / 2, brightness / 2, 0);
+			break;
+		case LED_STATIC_CUSTOM:
+			break;
+		}
+	}
 }
 
 void led_show(led_t *leds, TIM_TypeDef *TIMx)
