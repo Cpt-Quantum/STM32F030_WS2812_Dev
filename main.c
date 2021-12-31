@@ -36,6 +36,7 @@ led_t leds = {
 	.num_leds = NUM_LEDS,
 	.data_format = LED_GRB,
 	.led_bytes = LED_BYTES,
+	.TIMx = TIM3,
 };
 #endif
 #ifdef RGBW
@@ -48,8 +49,24 @@ led_t leds = {
 	.num_leds = NUM_LEDS,
 	.data_format = LED_RGBW,
 	.led_bytes = LED_BYTES,
+	.TIMx = TIM3,
 };
 #endif
+
+uint8_t effects_blacklist[] = {
+	LED_PULSE_CUSTOM,
+	LED_BREATHE_CUSTOM,
+	LED_STATIC_CUSTOM,
+};
+#define BLACKLISTED_EFFECTS_COUNT (sizeof(effects_blacklist) / sizeof(effects_blacklist[0]))
+led_effect_t effect = {
+	.current_effect = LED_OFF,
+	.effect_updated = false,
+	.effect_speed = 1,
+	.blacklisted_effects = effects_blacklist,
+	.num_blacklisted_effects = BLACKLISTED_EFFECTS_COUNT,
+	.brightness = 100,
+};
 
 #define SYSCLK_FREQ 48000000
 #define AHB_FREQ (SYSCLK_FREQ / 1)
@@ -202,11 +219,11 @@ int main(void)
 
 #ifdef RGB
 	led_rgb_write_all(&leds, 0, 0, 0);
-	led_show(&leds, TIM3);
+	led_show(&leds);
 #endif
 #ifdef RGBW
 	led_rgbw_write_all(&leds, 0, 0, 0, 0);
-	led_show(&leds, TIM3);
+	led_show(&leds);
 #endif
 
 	/* Loop forever */
@@ -219,21 +236,21 @@ int main(void)
 #ifdef RGB
 		/* Set all LEDs to red and send out the data */
 		led_rgb_write_all(&leds, MAX_BRIGHTNESS, 0, 0);
-		led_show(&leds, TIM3);
+		led_show(&leds);
 
 		/* Wait 1s */
 		delay_ms(1000);
 
 		/* Set all LEDs to green and send out the data */
 		led_rgb_write_all(&leds, 0, MAX_BRIGHTNESS, 0);
-		led_show(&leds, TIM3);
+		led_show(&leds);
 
 		/* Wait 1s */
 		delay_ms(1000);
 
 		/* Set all LEDs to blue and send out the data */
 		led_rgb_write_all(&leds, 0, 0, MAX_BRIGHTNESS);
-		led_show(&leds, TIM3);
+		led_show(&leds);
 
 		/* Wait 1s */
 		delay_ms(1000);
@@ -241,28 +258,28 @@ int main(void)
 #ifdef RGBW
 		//		/* Set all LEDs to red and send out the data */
 		//		led_rgbw_write_all(&leds, MAX_BRIGHTNESS, 0, 0, 0);
-		//		led_show(&leds, TIM3);
+		//		led_show(&leds);
 		//
 		//		/* Wait 1s */
 		//		delay_ms(1000);
 		//
 		//		/* Set all LEDs to green and send out the data */
 		//		led_rgbw_write_all(&leds, 0, MAX_BRIGHTNESS, 0, 0);
-		//		led_show(&leds, TIM3);
+		//		led_show(&leds);
 		//
 		//		/* Wait 1s */
 		//		delay_ms(1000);
 		//
 		//		/* Set all LEDs to blue and send out the data */
 		//		led_rgbw_write_all(&leds, 0, 0, MAX_BRIGHTNESS, 0);
-		//		led_show(&leds, TIM3);
+		//		led_show(&leds);
 		//
 		//		/* Wait 1s */
 		//		delay_ms(1000);
 		//
 		//		/* Set all LEDs to white and send out the data */
 		//		led_rgbw_write_all(&leds, 0, 0, 0, MAX_BRIGHTNESS);
-		//		led_show(&leds, TIM3);
+		//		led_show(&leds);
 		//
 		//		/* Wait 1s */
 		//		delay_ms(1000);
@@ -281,9 +298,15 @@ void TIM3_IRQHandler(void)
 	}
 }
 
+static bool first_cycle = true;
+static uint32_t counter = 0;
+static uint32_t counter_val = 20;
+static uint32_t led_tick_counter = 0;
+static const uint32_t led_update_tick_rate = 20;
 void SysTick_Handler(void)
 {
 	systick = systick + 1;
+	led_tick_counter++;
 	if (button_state_update(&button_1) == true)
 	{
 		/* Send the button value out over USART for debugging */
@@ -292,9 +315,39 @@ void SysTick_Handler(void)
 		usart_start_tx(USART1_settings);
 
 		/* Update the current led effect and switch to the appropriate display function */
-		//current_led_effect++;
-		current_led_effect = LED_STATIC_PURPLE;
-		//led_update_effect(&leds, current_led_effect, 50);
+		effect.current_effect++;
+		/* Check if the effect has reached the end of the list */
+		if (effect.current_effect >= LED_EFFECT_RESERVED)
+		{
+			effect.current_effect = 0;
+		}
+		effect.effect_updated = true;
+		// current_led_effect = LED_STATIC_PURPLE;
+		// led_update_effect(&leds, current_led_effect, 50);
+	}
+	if (first_cycle)
+	{
+		// led_rgbw_breathe_effect(&leds, 100, 0, 0, 0, 40, &first_cycle);
+		// led_rgbw_pulse(&leds, 50, 0, 0, 0, 150, 0, 0, 0, &first_cycle);
+		// led_show(&leds);
+		// counter = systick + counter_val;
+		// led_tick_counter = systick + led_update_tick_rate;
+		// first_cycle = false;
+	}
+
+	// if (systick > counter)
+	//{
+	//	// led_rgbw_breathe_effect(&leds, 100, 0, 0, 0, 40, &first_cycle);
+	//	led_rgbw_pulse(&leds, 50, 0, 0, 0, 150, 0, 0, 0, &first_cycle);
+	//	led_show(&leds);
+	//	counter = systick + counter_val;
+	// }
+
+	/* Update LEDs on the 50ms tick */
+	if (led_tick_counter >= led_update_tick_rate)
+	{
+		led_update_frame_data(&leds, &effect);
+		led_tick_counter = 0;
 	}
 }
 

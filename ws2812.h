@@ -16,23 +16,6 @@
 #define DMA_LOWER_HALF_OFFSET 0
 #define DMA_UPPER_HALF_OFFSET DMA_HALF_SIZE
 
-typedef enum
-{
-	LED_GRB = 0,
-	LED_RGB = 1,
-	LED_RGBW = 2,
-} LED_FORMAT_E;
-
-typedef struct
-{
-	uint8_t *data;
-	uint8_t bit_mask;
-	uint16_t arr_pos;
-	const uint16_t num_leds;
-	const LED_FORMAT_E data_format;
-	const uint8_t led_bytes;
-} led_t;
-
 typedef struct __attribute__((packed))
 {
 	uint8_t red;
@@ -82,7 +65,36 @@ typedef enum
 	LED_STATIC_PURPLE = 22,
 	LED_STATIC_YELLOW = 23,
 	LED_STATIC_CUSTOM = 24,
+	LED_EFFECT_RESERVED = 25,
 } LED_EFFECT_E;
+
+typedef enum
+{
+	LED_GRB = 0,
+	LED_RGB = 1,
+	LED_RGBW = 2,
+} LED_FORMAT_E;
+
+typedef struct
+{
+	uint8_t *data;
+	uint8_t bit_mask;
+	uint16_t arr_pos;
+	const uint16_t num_leds;
+	const LED_FORMAT_E data_format;
+	const uint8_t led_bytes;
+	TIM_TypeDef *TIMx;
+} led_t;
+
+typedef struct
+{
+	LED_EFFECT_E current_effect;
+	bool effect_updated;
+	uint8_t effect_speed;
+	uint8_t *blacklisted_effects;
+	uint8_t num_blacklisted_effects;
+	uint8_t brightness;
+} led_effect_t;
 
 void led_fill_dma_buffer(led_t *leds, uint16_t offset, uint16_t length);
 
@@ -102,12 +114,12 @@ void led_rgbw_write_pixel(led_t *leds, uint16_t pixel, uint8_t red,
 						  uint8_t green, uint8_t blue, uint8_t white);
 
 void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
-							uint8_t max_blue, uint8_t steps, uint32_t delay_ms);
+							uint8_t max_blue, uint8_t steps, bool *first_cycle);
 
 void led_rgb_pulse(led_t *leds, uint8_t background_red,
 				   uint8_t background_green, uint8_t background_blue,
 				   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
-				   uint32_t pulse_move_speed_ms);
+				   bool *first_cycle);
 
 void led_rgbw_pulse(led_t *leds,
 					uint8_t background_red,
@@ -118,10 +130,10 @@ void led_rgbw_pulse(led_t *leds,
 					uint8_t pulse_green,
 					uint8_t pulse_blue,
 					uint8_t pulse_white,
-					uint32_t pulse_move_speed_ms);
+					bool *first_cycle);
 
 void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
-							 uint8_t max_blue, uint8_t max_white, uint8_t steps, uint32_t delay);
+							 uint8_t max_blue, uint8_t max_white, uint8_t steps, bool *first_cycle);
 
 void led_rgbw_centre_ripple(led_t *leds,
 							uint8_t red,
@@ -132,8 +144,10 @@ void led_rgbw_centre_ripple(led_t *leds,
 
 void led_rgbw_intensity(led_t *leds, uint32_t adc_val, uint32_t normalisation);
 
-void led_update_effect(led_t *leds, LED_EFFECT_E led_effect, uint8_t brightness);
+void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cycle);
 
-void led_show(led_t *leds, TIM_TypeDef *TIMx);
+void led_update_frame_data(led_t *leds, led_effect_t *effect);
+
+void led_show(led_t *leds);
 
 #endif // WS2812_H
