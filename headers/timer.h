@@ -17,7 +17,9 @@ void init_timer(TIM_TypeDef *TIMx);
 
 void start_timer(TIM_TypeDef *TIMx, uint16_t prescale, uint16_t count);
 
+void disable_timer(TIM_TypeDef *TIMx);
+
 void setup_timer_capture_compare(TIM_TypeDef *TIMx, const TIMER_CHANNEL_E channel,
 								 uint16_t ARR, uint16_t CCR, uint16_t prescale, bool flip_polarity, bool preload);
 
-#endif //TIMER_H
+#endif // TIMER_H

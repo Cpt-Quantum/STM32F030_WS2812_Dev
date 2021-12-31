@@ -57,6 +57,11 @@ void start_timer(TIM_TypeDef *TIMx, uint16_t prescale, uint16_t count)
 	TIMx->CR1 |= TIM_CR1_CEN;
 }
 
+void disable_timer(TIM_TypeDef *TIMx)
+{
+	TIMx->CR1 &= ~TIM_CR1_CEN;
+}
+
 void setup_timer_capture_compare(TIM_TypeDef *TIMx, const TIMER_CHANNEL_E channel,
 								 uint16_t ARR, uint16_t CCR, uint16_t prescale, bool flip_polarity, bool preload)
 {
@@ -166,11 +171,11 @@ void setup_timer_capture_compare(TIM_TypeDef *TIMx, const TIMER_CHANNEL_E channe
 	}
 
 	/* Set the update event to generate an update of its registers and reset it */
-	//TIMx->EGR |= TIM_EGR_UG;
+	// TIMx->EGR |= TIM_EGR_UG;
 	/* Set the ARPE bit to allow changes to registers to take immediate effect */
-	//TIMx->CR1 |= TIM_CR1_ARPE;
+	// TIMx->CR1 |= TIM_CR1_ARPE;
 	/* Setup timer to trigger a hardware interrupt upon reaching the count */
-	//TIMx->DIER |= TIM_DIER_UIE;
+	// TIMx->DIER |= TIM_DIER_UIE;
 	/* Disable the timer for now*/
 	TIMx->CR1 &= ~TIM_CR1_CEN;
 }
