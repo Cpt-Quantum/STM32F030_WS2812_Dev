@@ -15,7 +15,8 @@
 #define DATA_0_PERIOD (DATA_0_HIGH + DATA_0_LOW)
 
 /* Defaults for LED effects */
-#define LED_BREATHE_STEPS_DEFAULT 10
+#define LED_BREATHE_STEPS_DEFAULT 12
+#define LED_MAX_SPEED LED_SPEED_8
 
 /* This buffer is used to store capture/compare values for the timer */
 uint16_t CCR_buffer[DMA_BUFF_SIZE];
@@ -125,7 +126,7 @@ void led_rgbw_write_pixel(led_t *leds, uint16_t pixel, uint8_t red,
 	leds->data[(4 * pixel) + 3] = white;
 }
 
-void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
+void led_rgb_breathe_effect(led_t *leds, led_effect_t *effect, uint8_t max_red, uint8_t max_green,
 							uint8_t max_blue, uint8_t steps, bool *first_cycle)
 {
 	/* Declare looping variables */
@@ -154,7 +155,7 @@ void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
 	if (increasing_brightness == true)
 	{
 		j--;
-		if (j == 0)
+		if (j == 1)
 		{
 			increasing_brightness = false;
 		}
@@ -162,20 +163,22 @@ void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
 	else if (increasing_brightness == false)
 	{
 		j++;
-		if (j == steps)
+		if (j == steps * ((LED_MAX_SPEED - effect->effect_speed) + 2))
 		{
 			increasing_brightness = true;
 		}
 	}
 }
 
-void led_rgb_pulse(led_t *leds, uint8_t background_red,
+void led_rgb_pulse(led_t *leds, led_effect_t *effect, uint8_t background_red,
 				   uint8_t background_green, uint8_t background_blue,
 				   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
 				   bool *first_cycle)
 {
 	/* Declare the counting variable */
 	static uint16_t i = 1;
+	/* Declare a frame counter to be able to set the speed of the effect */
+	static uint8_t frame_counter = 0;
 
 	if (*first_cycle)
 	{
@@ -183,25 +186,36 @@ void led_rgb_pulse(led_t *leds, uint8_t background_red,
 		led_rgb_write_all(leds, background_red, background_green, background_blue);
 		i = 1;
 
+		/* Set the frame counter to 0 to switch to this effect immediately */
+		frame_counter = 0;
+
 		*first_cycle = false;
 	}
 
-	/* Update the counting variable and check if the effect has gone through a whole cycle */
-	i++;
-	if (i >= leds->num_leds)
+	/* Check if the frame counter has finished, if so update the LEDs */
+	if (frame_counter == 0)
 	{
-		/* Initialise background_colour */
-		led_rgb_write_all(leds, background_red, background_green, background_blue);
-		i = 1;
+		/* Update the counting variable and check if the effect has gone through a whole cycle */
+		i++;
+		if (i >= leds->num_leds)
+		{
+			/* Initialise background_colour */
+			led_rgb_write_all(leds, background_red, background_green, background_blue);
+			i = 1;
+		}
+		frame_counter = LED_MAX_SPEED - effect->effect_speed;
 	}
 
 	/* Reset the previous pixel to the background colour */
 	led_rgb_write_pixel(leds, (i - 1), background_red, background_green, background_blue);
 	/* Set the current pixel to the foreground colour */
 	led_rgb_write_pixel(leds, i, pulse_red, pulse_green, pulse_blue);
+
+	/* Finally decrement the frame counter */
+	frame_counter--;
 }
 
-void led_rgbw_pulse(led_t *leds,
+void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 					uint8_t background_red,
 					uint8_t background_green,
 					uint8_t background_blue,
@@ -214,6 +228,8 @@ void led_rgbw_pulse(led_t *leds,
 {
 	/* Declare the counting variable */
 	static uint16_t i = 1;
+	/* Declare a frame counter to be able to set the speed of the effect */
+	static uint8_t frame_counter = 0;
 
 	if (*first_cycle)
 	{
@@ -221,25 +237,36 @@ void led_rgbw_pulse(led_t *leds,
 		led_rgbw_write_all(leds, background_red, background_green, background_blue, background_white);
 		i = 1;
 
+		/* Set the frame counter to 0 to switch to this effect immediately */
+		frame_counter = 0;
+
 		*first_cycle = false;
 	}
 
-	/* Update the counting variable and check if the effect has gone through a whole cycle */
-	i++;
-	if (i >= leds->num_leds)
+	/* Check if the frame counter has finished, if so update the LEDs */
+	if (frame_counter == 0)
 	{
-		/* Initialise background_colour */
-		led_rgbw_write_all(leds, background_red, background_green, background_blue, background_white);
-		i = 1;
+		/* Update the counting variable and check if the effect has gone through a whole cycle */
+		i++;
+		if (i >= leds->num_leds)
+		{
+			/* Initialise background_colour */
+			led_rgbw_write_all(leds, background_red, background_green, background_blue, background_white);
+			i = 1;
+		}
+		frame_counter = LED_MAX_SPEED - effect->effect_speed;
 	}
 
 	/* Reset the previous pixel to the background colour */
 	led_rgbw_write_pixel(leds, (i - 1), background_red, background_green, background_blue, background_white);
 	/* Set the current pixel to the foreground colour */
 	led_rgbw_write_pixel(leds, i, pulse_red, pulse_green, pulse_blue, pulse_white);
+
+	/* Finally decrement the frame counter */
+	frame_counter--;
 }
 
-void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
+void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect, uint8_t max_red, uint8_t max_green,
 							 uint8_t max_blue, uint8_t max_white, uint8_t steps, bool *first_cycle)
 {
 	/* Declare looping variables */
@@ -269,7 +296,7 @@ void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
 	if (increasing_brightness == true)
 	{
 		j--;
-		if (j == 0)
+		if (j == 1)
 		{
 			increasing_brightness = false;
 		}
@@ -277,7 +304,8 @@ void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
 	else if (increasing_brightness == false)
 	{
 		j++;
-		if (j == steps)
+		/* Note that the minimum number of steps (max speed) is 2 * input_steps */
+		if (j == steps * ((LED_MAX_SPEED - effect->effect_speed) + 2))
 		{
 			increasing_brightness = true;
 		}
@@ -383,43 +411,43 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 			led_rgb_write_all(leds, 0, 0, 0);
 			break;
 		case LED_PULSE_RED:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  effect->brightness, 0, 0,
 						  (effect->brightness * 2), 0, 0,
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_GREEN:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  0, effect->brightness, 0,
 						  0, (effect->brightness * 2), 0,
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_BLUE:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  0, 0, effect->brightness,
 						  0, 0, (effect->brightness * 2),
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_WHITE:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  effect->brightness / 3, effect->brightness / 3, effect->brightness / 3,
 						  (effect->brightness * 2) / 3, (effect->brightness * 2) / 3, (effect->brightness * 2) / 3,
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_ORANGE:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  effect->brightness / 2, effect->brightness / 2, 0,
 						  (effect->brightness * 2) / 2, (effect->brightness * 2) / 2, 0,
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_PURPLE:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  effect->brightness / 2, 0, effect->brightness / 2,
 						  (effect->brightness * 2) / 2, 0, (effect->brightness * 2) / 2,
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_YELLOW:
-			led_rgb_pulse(leds,
+			led_rgb_pulse(leds, effect,
 						  0, effect->brightness / 2, effect->brightness / 2,
 						  0, (effect->brightness * 2) / 2, (effect->brightness * 2) / 2,
 						  effect_first_cycle);
@@ -427,37 +455,37 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 		case LED_PULSE_CUSTOM:
 			break;
 		case LED_BREATHE_RED:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   effect->brightness, 0, 0,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_GREEN:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   0, effect->brightness, 0,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_BLUE:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   0, 0, effect->brightness,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_WHITE:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   effect->brightness / 3, effect->brightness / 3, effect->brightness / 3,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_ORANGE:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   effect->brightness / 2, effect->brightness / 2, 0,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_PURPLE:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   effect->brightness / 2, 0, effect->brightness / 2,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_YELLOW:
-			led_rgb_breathe_effect(leds,
+			led_rgb_breathe_effect(leds, effect,
 								   0, effect->brightness / 2, effect->brightness / 2,
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
@@ -504,44 +532,44 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 			led_rgbw_write_all(leds, 0, 0, 0, 0);
 			break;
 		case LED_PULSE_RED:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   effect->brightness, 0, 0, 0,
 						   (effect->brightness * 2), 0, 0, 0,
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_GREEN:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   0, effect->brightness, 0, 0,
 						   0, (effect->brightness * 2), 0, 0,
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_BLUE:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   0, 0, effect->brightness, 0,
 						   0, 0, (effect->brightness * 2), 0,
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_WHITE:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   0, 0, 0, effect->brightness,
 						   0, 0, 0, effect->brightness * 2,
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_ORANGE:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   effect->brightness / 2, effect->brightness / 2, 0, 0,
 						   (effect->brightness * 2) / 2, (effect->brightness * 2) / 2, 0, 0,
 						   effect_first_cycle);
 
 			break;
 		case LED_PULSE_PURPLE:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   effect->brightness / 2, 0, effect->brightness / 2, 0,
 						   (effect->brightness * 2) / 2, 0, (effect->brightness * 2) / 2, 0,
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_YELLOW:
-			led_rgbw_pulse(leds,
+			led_rgbw_pulse(leds, effect,
 						   0, effect->brightness / 2, effect->brightness / 2, 0,
 						   0, (effect->brightness * 2) / 2, (effect->brightness * 2) / 2, 0,
 						   effect_first_cycle);
@@ -549,37 +577,37 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 		case LED_PULSE_CUSTOM:
 			break;
 		case LED_BREATHE_RED:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									effect->brightness, 0, 0, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_GREEN:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									0, effect->brightness, 0, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_BLUE:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									0, 0, effect->brightness, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_WHITE:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									0, 0, 0, effect->brightness,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_ORANGE:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									effect->brightness / 2, effect->brightness / 2, 0, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_PURPLE:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									effect->brightness / 2, 0, effect->brightness / 2, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_YELLOW:
-			led_rgbw_breathe_effect(leds,
+			led_rgbw_breathe_effect(leds, effect,
 									0, effect->brightness / 2, effect->brightness / 2, 0,
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
@@ -625,6 +653,8 @@ static inline bool effect_is_static(LED_EFFECT_E effect)
 {
 	switch (effect)
 	{
+	case LED_OFF:
+		return true;
 	case LED_STATIC_RED:
 		return true;
 	case LED_STATIC_GREEN:

@@ -75,6 +75,25 @@ typedef enum
 	LED_RGBW = 2,
 } LED_FORMAT_E;
 
+typedef union
+{
+	rgb_t rgb_custom_colour;
+	rgbw_t rgbw_custom_colour;
+	uint32_t custom_value;
+} led_custom_input_t;
+
+typedef enum
+{
+	LED_SPEED_1 = 1,
+	LED_SPEED_2 = 2,
+	LED_SPEED_3 = 3,
+	LED_SPEED_4 = 4,
+	LED_SPEED_5 = 5,
+	LED_SPEED_6 = 6,
+	LED_SPEED_7 = 7,
+	LED_SPEED_8 = 8,
+} LED_SPEED_E;
+
 typedef struct
 {
 	uint8_t *data;
@@ -90,10 +109,12 @@ typedef struct
 {
 	LED_EFFECT_E current_effect;
 	bool effect_updated;
-	uint8_t effect_speed;
+	LED_SPEED_E effect_speed;
 	uint8_t *blacklisted_effects;
 	uint8_t num_blacklisted_effects;
 	uint8_t brightness;
+	led_custom_input_t custom_input_1;
+	led_custom_input_t custom_input_2;
 } led_effect_t;
 
 void led_fill_dma_buffer(led_t *leds, uint16_t offset, uint16_t length);
@@ -113,15 +134,15 @@ void led_rgbw_write_all(led_t *leds, uint8_t red, uint8_t green, uint8_t blue,
 void led_rgbw_write_pixel(led_t *leds, uint16_t pixel, uint8_t red,
 						  uint8_t green, uint8_t blue, uint8_t white);
 
-void led_rgb_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
+void led_rgb_breathe_effect(led_t *leds, led_effect_t *effect, uint8_t max_red, uint8_t max_green,
 							uint8_t max_blue, uint8_t steps, bool *first_cycle);
 
-void led_rgb_pulse(led_t *leds, uint8_t background_red,
+void led_rgb_pulse(led_t *leds, led_effect_t *effect, uint8_t background_red,
 				   uint8_t background_green, uint8_t background_blue,
 				   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
 				   bool *first_cycle);
 
-void led_rgbw_pulse(led_t *leds,
+void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 					uint8_t background_red,
 					uint8_t background_green,
 					uint8_t background_blue,
@@ -132,8 +153,10 @@ void led_rgbw_pulse(led_t *leds,
 					uint8_t pulse_white,
 					bool *first_cycle);
 
-void led_rgbw_breathe_effect(led_t *leds, uint8_t max_red, uint8_t max_green,
-							 uint8_t max_blue, uint8_t max_white, uint8_t steps, bool *first_cycle);
+void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect,
+							 uint8_t max_red, uint8_t max_green,
+							 uint8_t max_blue, uint8_t max_white,
+							 uint8_t steps, bool *first_cycle);
 
 void led_rgbw_centre_ripple(led_t *leds,
 							uint8_t red,
