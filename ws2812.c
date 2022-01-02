@@ -453,6 +453,14 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 						  effect_first_cycle);
 			break;
 		case LED_PULSE_CUSTOM:
+			led_rgb_pulse(leds, effect,
+						  effect->custom_input_1.rgb_custom_colour.red,
+						  effect->custom_input_1.rgb_custom_colour.green,
+						  effect->custom_input_1.rgb_custom_colour.blue,
+						  effect->custom_input_2.rgb_custom_colour.red,
+						  effect->custom_input_2.rgb_custom_colour.green,
+						  effect->custom_input_2.rgb_custom_colour.blue,
+						  effect_first_cycle);
 			break;
 		case LED_BREATHE_RED:
 			led_rgb_breathe_effect(leds, effect,
@@ -490,6 +498,11 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_CUSTOM:
+			led_rgb_breathe_effect(leds, effect,
+								   effect->custom_input_1.rgb_custom_colour.red,
+								   effect->custom_input_1.rgb_custom_colour.green,
+								   effect->custom_input_1.rgb_custom_colour.blue,
+								   LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_STATIC_RED:
 			led_rgb_write_all(leds,
@@ -520,6 +533,10 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 							  0, effect->brightness / 2, effect->brightness / 2);
 			break;
 		case LED_STATIC_CUSTOM:
+			led_rgb_write_all(leds,
+							  effect->custom_input_1.rgb_custom_colour.red,
+							  effect->custom_input_1.rgb_custom_colour.green,
+							  effect->custom_input_1.rgb_custom_colour.blue);
 			break;
 		default:
 			break;
@@ -575,6 +592,16 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 						   effect_first_cycle);
 			break;
 		case LED_PULSE_CUSTOM:
+			led_rgbw_pulse(leds, effect,
+						   effect->custom_input_1.rgbw_custom_colour.red,
+						   effect->custom_input_1.rgbw_custom_colour.green,
+						   effect->custom_input_1.rgbw_custom_colour.blue,
+						   effect->custom_input_1.rgbw_custom_colour.white,
+						   effect->custom_input_2.rgbw_custom_colour.red,
+						   effect->custom_input_2.rgbw_custom_colour.green,
+						   effect->custom_input_2.rgbw_custom_colour.blue,
+						   effect->custom_input_2.rgbw_custom_colour.white,
+						   effect_first_cycle);
 			break;
 		case LED_BREATHE_RED:
 			led_rgbw_breathe_effect(leds, effect,
@@ -612,6 +639,12 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_BREATHE_CUSTOM:
+			led_rgbw_breathe_effect(leds, effect,
+									effect->custom_input_1.rgbw_custom_colour.red,
+									effect->custom_input_1.rgbw_custom_colour.green,
+									effect->custom_input_1.rgbw_custom_colour.blue,
+									effect->custom_input_1.rgbw_custom_colour.white,
+									LED_BREATHE_STEPS_DEFAULT, effect_first_cycle);
 			break;
 		case LED_STATIC_RED:
 			led_rgbw_write_all(leds,
@@ -642,6 +675,11 @@ void led_update_effect(led_t *leds, led_effect_t *effect, bool *effect_first_cyc
 							   0, effect->brightness / 2, effect->brightness / 2, 0);
 			break;
 		case LED_STATIC_CUSTOM:
+			led_rgbw_write_all(leds,
+							   effect->custom_input_1.rgbw_custom_colour.red,
+							   effect->custom_input_1.rgbw_custom_colour.green,
+							   effect->custom_input_1.rgbw_custom_colour.blue,
+							   effect->custom_input_1.rgbw_custom_colour.white);
 			break;
 		default:
 			break;
