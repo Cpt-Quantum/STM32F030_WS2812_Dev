@@ -1,9 +1,9 @@
 #ifndef WS2812_H
 #define WS2812_H
 
-#include "inc/stm32f030x6.h"
+#include "../inc/stm32f030x6.h"
 
-#include "headers/peripherals.h"
+#include "../headers/peripherals.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -142,6 +142,11 @@ void led_rgb_pulse(led_t *leds, led_effect_t *effect, uint8_t background_red,
 				   uint8_t pulse_red, uint8_t pulse_green, uint8_t pulse_blue,
 				   bool *first_cycle);
 
+void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect,
+							 uint8_t max_red, uint8_t max_green,
+							 uint8_t max_blue, uint8_t max_white,
+							 uint8_t steps, bool *first_cycle);
+
 void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 					uint8_t background_red,
 					uint8_t background_green,
@@ -152,11 +157,6 @@ void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 					uint8_t pulse_blue,
 					uint8_t pulse_white,
 					bool *first_cycle);
-
-void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect,
-							 uint8_t max_red, uint8_t max_green,
-							 uint8_t max_blue, uint8_t max_white,
-							 uint8_t steps, bool *first_cycle);
 
 void led_rgbw_centre_ripple(led_t *leds,
 							uint8_t red,

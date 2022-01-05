@@ -1,8 +1,8 @@
-#include "inc/stm32f030x6.h"
+#include "../inc/stm32f030x6.h"
 
 #include "ws2812.h"
-#include "headers/peripherals.h"
-#include "headers/timer.h"
+#include "../headers/peripherals.h"
+#include "../headers/timer.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -215,6 +215,52 @@ void led_rgb_pulse(led_t *leds, led_effect_t *effect, uint8_t background_red,
 	frame_counter--;
 }
 
+void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect, uint8_t max_red, uint8_t max_green,
+							 uint8_t max_blue, uint8_t max_white, uint8_t steps, bool *first_cycle)
+{
+	/* Declare looping variables */
+	static uint8_t j = 0;
+	/* Declare variable for tracking progress of function */
+	static bool increasing_brightness = true;
+
+	/* Check for a first cycle to initialise the counting and state variables */
+	if (*first_cycle)
+	{
+		j = steps;
+		increasing_brightness = true;
+		*first_cycle = false;
+	}
+
+	/* Calculate and set the LED effect->brightnesses for all LEDs */
+	for (uint8_t i = 0; i < leds->num_leds; i++)
+	{
+		leds->data[(4 * i)] = max_green / j;
+		leds->data[(4 * i) + 1] = max_red / j;
+		leds->data[(4 * i) + 2] = max_blue / j;
+		leds->data[(4 * i) + 3] = max_white / j;
+	}
+
+	/* Update j depending on the current state, also checked if j has reached the end of */
+	/* its current state and update the state variable accordingly. */
+	if (increasing_brightness == true)
+	{
+		j--;
+		if (j == 1)
+		{
+			increasing_brightness = false;
+		}
+	}
+	else if (increasing_brightness == false)
+	{
+		j++;
+		/* Note that the minimum number of steps (max speed) is 2 * input_steps */
+		if (j == steps * ((LED_MAX_SPEED - effect->effect_speed) + 2))
+		{
+			increasing_brightness = true;
+		}
+	}
+}
+
 void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 					uint8_t background_red,
 					uint8_t background_green,
@@ -264,52 +310,6 @@ void led_rgbw_pulse(led_t *leds, led_effect_t *effect,
 
 	/* Finally decrement the frame counter */
 	frame_counter--;
-}
-
-void led_rgbw_breathe_effect(led_t *leds, led_effect_t *effect, uint8_t max_red, uint8_t max_green,
-							 uint8_t max_blue, uint8_t max_white, uint8_t steps, bool *first_cycle)
-{
-	/* Declare looping variables */
-	static uint8_t j = 0;
-	/* Declare variable for tracking progress of function */
-	static bool increasing_brightness = true;
-
-	/* Check for a first cycle to initialise the counting and state variables */
-	if (*first_cycle)
-	{
-		j = steps;
-		increasing_brightness = true;
-		*first_cycle = false;
-	}
-
-	/* Calculate and set the LED effect->brightnesses for all LEDs */
-	for (uint8_t i = 0; i < leds->num_leds; i++)
-	{
-		leds->data[(4 * i)] = max_green / j;
-		leds->data[(4 * i) + 1] = max_red / j;
-		leds->data[(4 * i) + 2] = max_blue / j;
-		leds->data[(4 * i) + 3] = max_white / j;
-	}
-
-	/* Update j depending on the current state, also checked if j has reached the end of */
-	/* its current state and update the state variable accordingly. */
-	if (increasing_brightness == true)
-	{
-		j--;
-		if (j == 1)
-		{
-			increasing_brightness = false;
-		}
-	}
-	else if (increasing_brightness == false)
-	{
-		j++;
-		/* Note that the minimum number of steps (max speed) is 2 * input_steps */
-		if (j == steps * ((LED_MAX_SPEED - effect->effect_speed) + 2))
-		{
-			increasing_brightness = true;
-		}
-	}
 }
 
 void led_rgbw_centre_ripple(led_t *leds,

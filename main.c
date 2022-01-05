@@ -6,7 +6,7 @@
 #include "headers/adc.h"
 #include "headers/timer.h"
 #include "headers/usart.h"
-#include "ws2812.h"
+#include "LED/ws2812.h"
 #include "avg.h"
 #include "string_format.h"
 #include "button.h"
